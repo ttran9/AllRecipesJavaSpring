@@ -1,54 +1,23 @@
-<%@ include file="preprocessorIncludes.jsp"%>
 <!DOCTYPE html>
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
 <head>
-	<%@ include file = "cssInclude.jsp"%>
-	<script type="text/javascript" src="<c:url value="/resources/javaScript/jquery-3.1.1.min.js"/>"></script>
-	<script type="text/javascript" src = "<c:url value="/resources/javaScript/bootstrap.min.js"/>"></script>
-	<script type="text/javascript" src = "resources/javaScript/create_recipe_check.js"></script>
-	<title>Create Your Own Recipe!</title>
+	<th:block th:include="/headAndNavbarContent :: templateHeadContent"></th:block>
+	<th:block th:include="/headAndNavbarContent :: cssInclude"></th:block>
+	<th:block th:include="/headAndNavbarContent :: jsInclude"></th:block>
+	<script type="text/javascript" th:src="@{/resources/javaScript/create_recipe_check.js}"></script>
 </head>
 <body>
-<%@ include file ="navbar_include_1.jsp" %>
-	       			<li><a href="<c:url value="/"/>">Home!</a></li>
-<%@ include file = "navbar_include_2.jsp" %>
-					<c:choose>
-						<c:when test="${loggedInName != null}">
-							<li class = "dropdown">
-								<a class="dropdown-toggle" data-toggle="dropdown" href="#">
-									${loggedInName}
-									<span class="caret">
-									</span>
-								</a>
-								<ul class="dropdown-menu">
-									<li><a href="<c:url value="/showShoppingList"/>">Go To Shopping List</a></li>
-									<li><a href="<c:url value="/showPantryList"/>">Go To Pantry List</a></li>
-								</ul>
-							</li>
-							<li>
-								<a href = "<c:url value="/logout"/>">logout</a>
-							</li>
-						</c:when>
-						<c:otherwise>
-							<li>
-								<a href = "<c:url value="/signin"/>">login</a>
-							</li>
-							<li>
-								<a href = "<c:url value="/register"/>">register</a>
-							</li>
-						</c:otherwise>					
-					</c:choose>
-<%@ include file = "navbar_include_3.jsp" %>
+
+	<div th:include="/headAndNavbarContent :: headerBarContent">
+	</div>
 	
 	<div class ="container subHeader">
-		<c:set var="csrfName" value = "_csrf"></c:set>
 		<div class = "row listOuterPadding">
 			<div class = "col-xs-12">
-				<spring:url value="/makeRecipe" var="makeRecipeURL"/>
-				<form:form class="form-signin" id="createRecipeForm" method="POST" action="${makeRecipeURL}" modelAttribute="createRecipeForm">
-					<form:input class="form-control" type="text" maxlength="60" size="40" id="recipeName" path="recipeName" placeholder="recipe name here" required="true"/>
+				<form class="form-signin" id="createRecipeForm" method="POST" th:action="@{/makeRecipe}" th:object="${createRecipeForm}">
+					<input class="form-control" type="text" maxlength="60" size="40" id="recipeName" th:attr="name='recipeName'" placeholder="recipe name here" required/>
 					<label for="servingsField">Servings:</label>
-					<form:select id="servingsField" path="numServings" required="true">
+					<select id="servingsField" th:field="*{numServings}" required>
 						<option value="1">1</option>
 						<option value="2">2</option>
 						<option value="3">3</option>
@@ -69,7 +38,7 @@
 						<option value="18">18</option>
 						<option value="19">19</option>
 						<option value="20">20</option>
-					</form:select> <br>
+					</select> <br>
 					<label for="prepHours">Prep Time Hours:</label>
 					<select id="prepHours" name="prepHours" required>
 						<option value="0">0</option>
@@ -170,22 +139,21 @@
 						<option value="55">55</option>
 						<option value="60">60</option>
 					</select> <br>
-					<form:input class="form-control" type="text" maxlength="20" size="20" id="dishType" path="dishType" placeholder="type: cuisine, salad, etc." required="true"/>
+					<input class="form-control" type="text" maxlength="20" size="20" id="dishType" th:field="*{dishType}" placeholder="type: cuisine, salad, etc." required/>
 					<label for="imageURl">Picture of the recipe (URLs only):</label><br>
-					<form:textarea class="form-control" id="imageURL" path="imageURL" rows="4" cols="50"></form:textarea>
+					<textarea class="form-control" id="imageURL" th:field="*{imageURL}" rows="4" cols="50"></textarea>
 					<label for="recipeDescription">Brief recipe description:</label><br>
-					<form:textarea class="form-control" id="recipeDescription" path="recipeDescription" rows="4" cols="50" required="true"></form:textarea> <br>
-					<button class="btn btn-lg btn-primary btn-block" type="submit" onclick = "return validateRecipeCreate('${csrfName}')">Create Recipe.</button> <br>
-					<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" required>
-					<form:input type="hidden" path="prepTimeUnparsed" id="prepTime" required="true"/>
-					<form:input type="hidden" path="cookTimeUnparsed" id="cookTime" required="true"/>
-					<c:if test="${message != null}">
-						<div class = "alert alert-warning">
-							${message}
+					<textarea class="form-control" id="recipeDescription" th:field="*{recipeDescription}" rows="4" cols="50" required></textarea> <br>
+					<button class="btn btn-lg btn-primary btn-block" type="submit" onclick = "return validateRecipeCreate()">Create Recipe.</button> <br>
+					<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" required>
+					<input type="hidden" th:attr="name='prepTimeUnparsed'" id="prepTime" required/>
+					<input type="hidden" th:attr="name='cookTimeUnparsed'" id="cookTime" required/>
+					<th:block th:if="${message != null}">
+						<div class = "alert alert-warning" th:text="${message}">
 						</div>
-					</c:if>
+					</th:block>
 					<div id="createRecipeInfo"></div>
-				</form:form>
+				</form>
 			</div>
 		</div>
 	</div>

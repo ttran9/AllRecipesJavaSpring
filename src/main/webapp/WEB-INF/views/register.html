@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta name="currentPath" th:content="${#httpServletRequest.getContextPath()}"/>
+	<th:block th:include="/headAndNavbarContent :: templateHeadContent"></th:block>
+	<th:block th:include="/headAndNavbarContent :: cssInclude"></th:block>
+	<th:block th:include="/headAndNavbarContent :: jsInclude"></th:block>
+	<script type="text/javascript" th:src="@{/resources/javaScript/register_check.js}"></script>
+</head>
+<body>
+
+	<div th:include="/headAndNavbarContent :: headerBarContent">
+	</div>
+	
+    <div class="container">
+    	<form class="form-signin" id="registrationForm" th:action="@{/processRegistration}" method="post" th:object="${registerUser}">
+			<h2 class="form-signin-heading">Register Below!</h2>
+			<input type="text" id="registerUserName" th:field="*{userName}" class="form-control" placeholder="enter user name" maxlength="35" th:onfocusout="'checkUserNameRegistration();'"/>
+			<input type="password" id="registerPassword" th:field="*{password}" class="form-control" placeholder="password" maxlength="20"/>
+    		<input type="password" id="registerValidatePassword" th:field="*{validatePassword}" class="form-control" placeholder="enter password again" maxlength="20"/>
+			<button class="btn btn-lg btn-primary btn-block" type="submit" id="register" name="register" onclick="return verifyPasswords()" disabled>Register User!</button>
+			<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"> <br>
+   			<div id ="registrationErrorField"> </div>
+   			<th:block th:if="${error != null}">
+   				<div class="registrationError" th:utext="${error}"></div>
+   			</th:block>
+      </form>
+    </div> <!-- /container -->
+
+</body>
+</html>

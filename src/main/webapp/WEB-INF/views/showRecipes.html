@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<th:block th:include="/headAndNavbarContent :: templateHeadContent"></th:block>
+	<th:block th:include="/headAndNavbarContent :: cssInclude"></th:block>
+	<th:block th:include="/headAndNavbarContent :: jsInclude"></th:block>
+</head>
+<body>
+
+	<div th:include="/headAndNavbarContent :: headerBarContent">
+	</div>
+	
+	<div class="container">
+		<div class="row listOuterPadding">
+		<th:block th:if="${errorMessage != null}">
+			<div class="list-group">
+				<ul class="list-unstyled">
+					<li class="listInnerPadding errorNotificationStyling" th:text="${errorMessage}"></li>
+				</ul>
+			</div>
+		</th:block>
+       	<th:block th:if="${recipesList != null}">      		
+    		<div class="list-group">
+   				<th:block th:if="${recipesList.size() gt 0}">
+   					<ul id="recipes-list" class="list-unstyled">
+       					<th:block th:each="recipes : ${recipesList}">
+							<li th:id="${recipes.getRecipeName()}" class="listInnerPadding">
+								<div class="list-group-item list-group-item-action flex-column align-items-start">
+									<div class="d-flex w-100 justify-content-between">
+										<h5 class="mb-1"><a th:href="@{/showSingleRecipe?recipeName=__${recipes.getRecipeName()}__}" th:text="${recipes.getRecipeName()}"></a></h5>
+											<th:block th:if="${recipes.getTotalNumberOfReviews() gt 0}">
+												<h5 class="mb-1" th:text="${recipes.getTotalNumberOfReviews()} + ' (' + ${recipes.getAverageRating()} +')'"></h5>
+											</th:block>
+											<th:block th:if="${recipes.getTotalNumberOfReviews() le 0}">
+												<h5 class="mb-1">This recipe has not been reviewed.</h5>
+											</th:block>
+										<th:block th:if="${recipes.getRecipeCreationDate() != null}">
+											<small th:text="${recipes.getUserOwner()} + ' on ' + ${recipes.getRecipeCreationDate()}"></small>
+										</th:block>	
+										<th:block th:unless="${recipes.getRecipeCreationDate() != null}">
+											<small>No post date can be retrieved.</small>
+										</th:block>
+									</div>
+									<p class="mb-1" th:text="${recipes.getRecipeDescription()}"></p><br>
+								</div>
+							</li>
+						</th:block>
+					</ul>	
+				</th:block>
+    			
+   				<th:block th:if="${recipesList.size() eq 0}">
+   						<ul class = "list-unstyled">
+							<li class = "listInnerPadding">
+								<div class="list-group-item list-group-item-action flex-column align-items-start">
+									<div class="d-flex w-100 justify-content-between">
+										<h5 class="mb-1">There have been no recipes created by any users.</h5>
+									</div>
+								</div>
+							</li>
+						</ul>
+   				</th:block>
+			</div>
+       	</th:block>
+        	
+        <th:block th:unless="${recipesList != null}">
+        	<div class="list-group">
+				<ul class = "list-unstyled">
+					<li class = "listInnerPadding">
+						<div class="list-group-item list-group-item-action flex-column align-items-start">
+							<div class="d-flex w-100 justify-content-between">
+								<h5 class="mb-1">Error retrieving recipes.</h5>
+							</div>
+						</div>
+					</li>
+				</ul>
+			</div>
+        </th:block>
+		</div>
+	</div>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<th:block th:include="/headAndNavbarContent :: templateHeadContent"></th:block>
+	<th:block th:include="/headAndNavbarContent :: cssInclude"></th:block>
+	<th:block th:include="/headAndNavbarContent :: jsInclude"></th:block>
+</head>
+<body>
+
+	<div th:include="/headAndNavbarContent :: headerBarContent">
+	</div>
+	
+	<div class="container">
+		<div class = "row subHeader">
+			<div class = "row listOuterPadding">
+				<div class="col-xs-12 centered-text">
+					<th:block th:if="${message != null}" th:text="${message}">
+					</th:block>
+					<th:block th:unless="${message != null}">
+						The web page could not be found.
+					</th:block>
+				</div>
+			</div>
+		</div>
+	</div>
+
+</body>
+</html>

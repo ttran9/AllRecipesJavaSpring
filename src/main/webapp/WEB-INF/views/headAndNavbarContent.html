@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+</head>
+<body>
+
+	<th:block th:fragment="templateHeadContent">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta charset="UTF-8">
+		<title th:text="${title}"></title>
+	</th:block>
+
+	<th:block th:fragment="cssInclude">
+		<link type="text/css" rel="stylesheet" th:href="@{/resources/css/bootstrap.min.css}"/>
+		<link type="text/css" rel="stylesheet" th:href="@{/resources/css/customStyling.css}"/>
+	</th:block>
+	
+	<th:block th:fragment="jsInclude">
+		<script type="text/javascript" th:src="@{/resources/javaScript/jquery-3.1.1.min.js}"></script>
+		<script type="text/javascript" th:src="@{/resources/javaScript/bootstrap.min.js}"></script>
+	</th:block>
+
+	<div th:fragment="headerBarContent">
+		<nav class="navbar navbar-inverse navbar-static-top">
+			<div class="container">
+				<div class="navbar-collapse collapse in">
+					<ul th:replace="this :: navBar">
+					</ul>
+					<th:block th:if="${isRightBar} == true">
+					<ul th:replace="this :: rightNavbar">
+					</ul>
+					</th:block>
+				</div>
+			</div>
+		</nav>	
+	</div>
+	
+	<ul class="nav navbar-nav" th:fragment="navBar">
+		<li>
+			<a th:href="@{/}">Home!</a>
+		</li>
+		<li th:if="${secondNavbarLink != null && secondNavbarLinkText != null}">
+			<a th:href="@{/__${secondNavbarLink}__}" th:text="${secondNavbarLinkText}"></a>
+		</li>
+		<li class="dropdown" th:if="${options != null}">
+			<a class="dropdown-toggle" data-toggle="dropdown" href="#" th:text=${options}>
+				<span class="caret"></span>
+			</a>
+			<th:block th:if="${leftMenuType != null}">
+				<ul class="dropdown-menu">
+					<th:block th:switch="${leftMenuType}">
+						<th:block th:case="singleRecipePage">
+							<th:block th:if="${recipeObject != null}">
+								<li><a th:href="@{/showSingleRecipe?recipeName=__${recipeObject.getRecipeName()}__}">Refresh Page</a></li>
+								<li><a th:href="@{/editRecipe?recipeName=__${recipeObject.getRecipeName()}__}">Edit Recipe Details</a></li>
+								<li><a th:href="@{/deleteRecipe?recipeName=__${recipeObject.getRecipeName()}__}">Delete Recipe</a></li>
+							</th:block>
+						</th:block>
+					</th:block>
+				</ul>
+			</th:block>
+		</li>		
+	</ul>
+	
+	
+	<ul class="nav navbar-nav navbar-right" th:fragment="rightNavbar">
+		<th:block th:if="${loggedInName != null}">
+			<li class = "dropdown">
+				<a class="dropdown-toggle" data-toggle="dropdown" href="#" th:text="${loggedInName}">
+					<span class="caret">
+					</span>
+				</a>
+				<th:block th:if="${rightMenuType != null}">
+					<th:block th:switch="${rightMenuType}">
+						<ul class="dropdown-menu">
+							<th:block th:case="genericRightMenu">
+								<li><a th:href="@{/showShoppingList}">Go To Shopping List!</a></li>
+								<li><a th:href="@{/showPantryList}">Go To Pantry List!</a></li>
+							</th:block>
+							<th:block th:case="shoppingListMenu">
+								<li><a th:href="@{/showPantryList}">Go To Pantry List!</a></li>
+								<li><a th:href="@{/showShoppingList}">Go To Shopping List!</a></li>
+							</th:block>
+							<th:block th:case="pantryListMenu">
+								<li><a th:href="@{/showShoppingList}">Go To Shopping List!</a></li>
+								<li><a th:href="@{/showPantryList}">Go To Pantry List!</a></li>
+							</th:block>
+						</ul>
+					</th:block>
+				</th:block>
+			</li>
+			<li>
+				<a th:href = "@{/logout}">logout</a>
+			</li>
+		</th:block>
+		<th:block th:unless="${loggedInName != null}">
+			<li>
+				<a th:href="@{/signin}">Login</a>
+			</li>
+			<li>
+				<a th:href="@{/register}">Register</a>
+			</li>
+		</th:block>
+	</ul>
+
+
+</body>
+</html>

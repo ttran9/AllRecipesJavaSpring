@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+</head>
+<body>
+
+	<th:block th:fragment="pantryListItems">
+		<button class="btn btn-danger" th:onclick="'removePantryListItem(\'' + ${ingredient.getIngredientID()} + '\', \'' + ${counter.count} + '\');'">remove</button>
+		<button class="btn btn-danger" th:onclick="'setUpdateIngredientFields(\'' + ${ingredient.getIngredientNameParsed()} + '\', \'' + ${ingredient.getDisplayType()} + '\', \'' + ${ingredient.getWholeNumber()} + '\', \'' + ${ingredient.getNumerator()} + '\', \'' + ${ingredient.getDenominator()} + '\', \'' + ${ingredient.getIngredientUnit()} + '\', \'' + ${ingredient.getIngredientType()} + '\');'">update</button>	
+		<button class="btn btn-danger" th:onclick="'setSubtractPantryIngredientFields(\'' + ${ingredient.getIngredientNameParsed()} + '\', \'' + ${ingredient.getDisplayType()} + '\', \'' + ${ingredient.getWholeNumber()} + '\', \'' + ${ingredient.getNumerator()} + '\', \'' + ${ingredient.getDenominator()} + '\');'">subtract quantity</button>
+	</th:block>
+
+	<th:block th:fragment="shoppingListItems">
+		<button class="btn btn-danger" th:onclick="'removeShoppingListItem(\'' + ${ingredient.getIngredientID()} + '\', \'' + ${counter.count} + '\');'">remove</button>
+		<button class="btn btn-danger" th:onclick="'setUpdateIngredientFields(\'' + ${ingredient.getIngredientNameParsed()} + '\', \'' + ${ingredient.getDisplayType()} + '\', \'' + ${ingredient.getWholeNumber()} + '\', \'' + ${ingredient.getNumerator()} + '\', \'' + ${ingredient.getDenominator()} + '\', \'' + ${ingredient.getIngredientUnit()} + '\', \'' + ${ingredient.getIngredientType()} + '\');'">update</button>	
+	</th:block>
+	
+
+</body>
+</html>
