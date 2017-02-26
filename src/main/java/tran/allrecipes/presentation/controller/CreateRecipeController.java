@@ -27,14 +27,6 @@ public class CreateRecipeController {
 	private static final String SHOW_CREATE_RECIPE = "/showCreateRecipe";
 	/** URL mapping to create a recipe. */
 	private static final String MAKE_RECIPE = "/makeRecipe";
-	/** The name of the create recipe form. */
-	private static final String ADD_RECIPE_FORM_NAME = "createRecipeForm";
-	
-	/** Initializes recipe ingredient data members from the recipe add ingredient form. */
-	@ModelAttribute(ADD_RECIPE_FORM_NAME) 
-	public Recipe getRecipe() {
-		return new Recipe();
-	}
 	
 	@RequestMapping(value=SHOW_CREATE_RECIPE, method = RequestMethod.GET)
 	public String showCreateRecipe(Principal principal, ModelMap model, @RequestParam(value=MESSAGE_PARAM, required=false) String message, HttpServletRequest request, RedirectAttributes redirectAttrs) {
@@ -43,7 +35,7 @@ public class CreateRecipeController {
 	} 
 
 	@RequestMapping(value=MAKE_RECIPE, method = RequestMethod.POST)
-	public String processCreateRecipe(Principal principal, @ModelAttribute(ADD_RECIPE_FORM_NAME) Recipe recipe, RedirectAttributes redirectAttrs) {
+	public String processCreateRecipe(Principal principal, @ModelAttribute Recipe recipe, RedirectAttributes redirectAttrs) {
 		CreateRecipeServiceImpl showRecipeCreate = new CreateRecipeServiceImpl();
 		return showRecipeCreate.processCreateRecipe(principal, recipe.getRecipeName(), String.valueOf(recipe.getNumServings()), recipe.getPrepTimeUnparsed(), recipe.getCookTimeUnparsed(), 
 			recipe.getDishType(), recipe.getImageURL(), recipe.getRecipeDescription(), redirectAttrs);

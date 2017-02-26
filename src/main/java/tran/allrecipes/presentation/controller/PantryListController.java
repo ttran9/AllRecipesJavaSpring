@@ -73,7 +73,8 @@ public class PantryListController {
 	}
 	
 	@RequestMapping(value=ADD_PANTRY_LIST_INGREDIENT_URL, method=RequestMethod.POST) 
-	public String addPantryListIngredient(Principal principal, @ModelAttribute(ADD_PANTRY_INGREDIENT_FORM) PantryIngredient pantryIngredient, RedirectAttributes redirectAttrs) {
+	//public String addPantryListIngredient(Principal principal, @ModelAttribute(ADD_PANTRY_INGREDIENT_FORM) PantryIngredient pantryIngredient, RedirectAttributes redirectAttrs) {
+	public String addPantryListIngredient(Principal principal, @ModelAttribute PantryIngredient pantryIngredient, RedirectAttributes redirectAttrs) {
 		UserListServiceImpl pantryListService = new UserListServiceImpl();
 		return pantryListService.addUserListIngredient(principal, pantryIngredient.getIngredientListName(), pantryIngredient.getIngredientName(), pantryIngredient.getIngredientUnit(), pantryIngredient.getWholeNumber(), 
 			pantryIngredient.getIngredientFractionQuantity(), pantryIngredient.getIngredientType(), redirectAttrs, PANTRY_LIST_TYPE);
@@ -88,14 +89,16 @@ public class PantryListController {
 	}
 	
 	@RequestMapping(value=UPDATE_PANTRY_LIST_INGREDIENT_AMOUNT_URL, method=RequestMethod.POST)
-	public String updatePantryListIngredientAmount(Principal principal, @ModelAttribute(SUBTRACT_PANTRY_INGREDIENT_FORM) PantryIngredient pantryIngredient, RedirectAttributes redirectAttrs) {
+	//public String updatePantryListIngredientAmount(Principal principal, @ModelAttribute(SUBTRACT_PANTRY_INGREDIENT_FORM) PantryIngredient pantryIngredient, RedirectAttributes redirectAttrs) {
+	public String updatePantryListIngredientAmount(Principal principal, @ModelAttribute PantryIngredient pantryIngredient, RedirectAttributes redirectAttrs) {
 		UserListServiceImpl pantryListService = new UserListServiceImpl();
 		return pantryListService.updateListIngredientAmount(principal, pantryIngredient.getWholeNumber(), pantryIngredient.getIngredientFractionQuantity(), pantryIngredient.getIngredientListName(), 
 			pantryIngredient.getIngredientName(), redirectAttrs, PANTRY_LIST_TYPE);
 	}
 	
 	@RequestMapping(value=UPDATE_PANTRY_LIST_INGREDIENT_URL, method=RequestMethod.POST)
-	public String updatePantryListIngredient(Principal principal, @ModelAttribute(UPDATE_PANTRY_INGREDIENT_FORM) PantryIngredient pantryIngredient, RedirectAttributes redirectAttrs) {
+	//public String updatePantryListIngredient(Principal principal, @ModelAttribute(UPDATE_PANTRY_INGREDIENT_FORM) PantryIngredient pantryIngredient, RedirectAttributes redirectAttrs) {
+	public String updatePantryListIngredient(Principal principal, @ModelAttribute PantryIngredient pantryIngredient, RedirectAttributes redirectAttrs) {
 		UserListServiceImpl pantryListService = new UserListServiceImpl();
 		return pantryListService.updateUserListIngredient(principal, pantryIngredient.getIngredientName(), pantryIngredient.getIngredientListName(), pantryIngredient.getWholeNumber(), pantryIngredient.getIngredientFractionQuantity(), 
 			pantryIngredient.getIngredientUnit(), pantryIngredient.getIngredientType(), redirectAttrs, PANTRY_LIST_TYPE);

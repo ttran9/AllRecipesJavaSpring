@@ -45,6 +45,20 @@ public class RegisterServiceImpl {
 	private static final String ERROR_PARAMETER = "error";
 	/** Notification for logged in user. */
 	private static final String USER_ALREADY_LOGGED_IN = "You cannot be logged in when trying to register another account, log out first.";;
+	/** The user object. */
+	private static final String USER_REGISTRATION = "registerUser";
+	/** The title of the page attribute. */
+	private static final String PAGE_TITLE_ATTRIBUTE = "title";
+    /** Page title. */
+	private static final String PAGE_TITLE = "Login Page!";
+	/** The attribute to have a second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK = "secondNavbarLink";
+	/** The attribute to display text of the second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK_TEXT_ATTRIBUTE = "secondNavbarLinkText";
+	/** The URL of the second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK_URL = "signin";
+	/** The text of the second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK_TEXT = "LogIn!";
 	
 	/**
 	 * @param principal An object holding authentication information of the current user.
@@ -60,6 +74,10 @@ public class RegisterServiceImpl {
 		}
 		else {
 			if(error != null) model.addAttribute("error", error);
+    		model.addAttribute(SECOND_NAVBAR_LINK, SECOND_NAVBAR_LINK_URL);
+    		model.addAttribute(SECOND_NAVBAR_LINK_TEXT_ATTRIBUTE, SECOND_NAVBAR_LINK_TEXT);
+    		model.addAttribute(PAGE_TITLE_ATTRIBUTE, PAGE_TITLE);
+    		model.addAttribute(USER_REGISTRATION, new User());
 			return "register";
 		}
 	}
@@ -125,7 +143,7 @@ public class RegisterServiceImpl {
 				if(usersDAO.getUserName(userName) == null) {
 					if(userService.validate()) {
 						String encryptedPassword = userService.encryptPassword(password);
-						int createUserCode = usersDAO.createUser(userName, encryptedPassword, false);
+						int createUserCode = usersDAO.createUser(userName, encryptedPassword, true);
 						if(createUserCode == 1) {
 							ShoppingListDAOImpl shoppingListDAO = (ShoppingListDAOImpl) appContext.getBean(SHOPPING_LIST_DAO_BEAN_NAME);
 							PantryListDAOImpl pantryListDAO = (PantryListDAOImpl) appContext.getBean(PANTRY_LIST_DAO_BEAN_NAME);
@@ -136,16 +154,17 @@ public class RegisterServiceImpl {
 							int createUserRole = usersDAO.insertUserRole("ROLE_USER", userName);
 							// at this point a different object will be used to print the notification to the user.
 							StringBuilder notificationMessage = new StringBuilder();
-							notificationMessage.append("user successfully created!<br>if there are any other messages below contact an admin.<br>");
+							String lineSeparator = System.lineSeparator();
+							notificationMessage.append("user successfully created!" + lineSeparator + "if there are any other messages below contact an admin." + lineSeparator);
 							
 							if(createShoppingList != 1) {
-								notificationMessage.append("no shopping list was created.<br>");
+								notificationMessage.append("no shopping list was created.");
 							}
 							if(createUserRole != 1) {
-								notificationMessage.append("no role could be created.<br>");
+								notificationMessage.append("no role could be created.");
 							}
 							if(createPantryList != 1) {
-								notificationMessage.append("no pantry list was created.<br>");
+								notificationMessage.append("no pantry list was created.");
 							}
 							
 							sendVerificationEmail(usersDAO, shoppingListDAO, pantryListDAO, userName);

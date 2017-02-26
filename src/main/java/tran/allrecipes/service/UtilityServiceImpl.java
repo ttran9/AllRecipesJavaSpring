@@ -6,6 +6,7 @@ import java.security.Principal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
@@ -19,6 +20,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.stereotype.Service;
 
@@ -59,6 +62,8 @@ public class UtilityServiceImpl {
 	private final String ADMIN_PREFIX_NAME = "admin";
 	/** The admin role string. */
 	private static final String ADMIN_ROLE = "ROLE_ADMIN";
+	/** The user role string. */
+	private static final String USER_ROLE = "ROLE_USER";
 	/** database.properties prefix. */
 	private final String DATABASE_PROPERTY_PREFIX = "jdbc.";
 	/** the remember me cookie name. */
@@ -143,7 +148,7 @@ public class UtilityServiceImpl {
 	}
 	
 	/**
-	 * @param principal An object holding authentication informmation of the current user.
+	 * @param principal An object holding authentication information of the current user.
 	 * @return True if the user has been authenticated, false if not.
 	 */
 	public boolean isUserAuthenticated(Principal principal) {
@@ -153,7 +158,7 @@ public class UtilityServiceImpl {
 			if(userName != null) {	
 				/**
 				 * check if the user is disabled. this is an important check as the user can be logged in
-				 * and have been disabled, without this check and with the removeal of a filter that
+				 * and have been disabled, without this check and with the removal of a filter that
 				 * disabled user could still modify reviews, recipes, his/her own shopping and pantry list.
 				 */
 				ApplicationContext appContext = new ClassPathXmlApplicationContext(DATABASE_SOURCE_FILE);
@@ -161,7 +166,17 @@ public class UtilityServiceImpl {
 				User user = userDAO.getUser(userName);
 				if(user != null) {
 					if(userDAO.getEnabled(userName)) {
-						isAuthenticated = true;
+						/**
+						 * the extra check is added here because to ensure that the current user must have an actual role, ROLE_USER or ROLE_ADMIN
+						 * instead of an anonymous role for example.
+						 */
+						Collection<? extends GrantedAuthority> userRoles = SecurityContextHolder.getContext().getAuthentication().getAuthorities();
+						for(GrantedAuthority userRole : userRoles) {
+							if(userRole.getAuthority().equals(USER_ROLE) || userRole.getAuthority().equals(ADMIN_ROLE)) {
+								isAuthenticated = true;
+								break;
+							}
+						}
 					}
 				}
 				userDAO = null;

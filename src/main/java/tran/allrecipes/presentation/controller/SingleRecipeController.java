@@ -55,18 +55,6 @@ public class SingleRecipeController {
 	private static final String SORT_TYPE_PARAM = "sortType";
 	/** The parameter to set the ingredient ID used as a unique identifier for a specific ingredient */
 	private static final String INGREDIENT_ID_PARAM = "ingredientID";
-	/** The name of the recipe add ingredient form. */
-	private static final String RECIPE_ADD_INGREDIENT_FORM_NAME = "recipeIngredientAddForm";
-	/** The name of the recipe update ingredient form. */
-	private static final String RECIPE_UPDATE_INGREDIENT_FORM_NAME = "recipeIngredientUpdateForm";
-	/** The name of the recipe add direction form. */
-	private static final String RECIPE_ADD_DIRECTION_FORM_NAME = "recipeAddDirectionForm";
-	/** The name of the recipe update direction form. */
-	private static final String RECIPE_UPDATE_DIRECTION_FORM_NAME = "updateRecipeDirectionForm";
-	/** The name of the recipe add review form. */
-	private static final String RECIPE_ADD_REVIEW_FORM_NAME = "recipeAddReviewForm";
-	/** The name of the recipe edit review form. */
-	private static final String RECIPE_EDIT_REVIEW_FORM_NAME = "recipeEditReviewForm";
 	/** The new servings parameter for modifying all the ingredients in the recipe. */
 	private static final String NEW_SERVINGS_PARAM = "newServings";
 	/** The old servings parameter for modifying all the ingredients in the recipe. */
@@ -80,37 +68,6 @@ public class SingleRecipeController {
 	/** The parameter to set the review's rating of the recipe. */
 	private static final String REVIEW_RATING_PARAM = "reviewRating";
 	
-	/** Initializes recipe ingredient data members from the recipe add ingredient form. */
-	@ModelAttribute(RECIPE_ADD_INGREDIENT_FORM_NAME) 
-	public Ingredient getAddRecipeIngredient() {
-		return new Ingredient();
-	}
-	/** Initializes recipe ingredient data members from the recipe update ingredient form. */
-	@ModelAttribute(RECIPE_UPDATE_INGREDIENT_FORM_NAME) 
-	public Ingredient getUpdateRecipeIngredient() {
-		return new Ingredient();
-	}
-	/** Initializes recipe direction data members from the recipe add direction form. */
-	@ModelAttribute(RECIPE_ADD_DIRECTION_FORM_NAME)
-	public RecipeDirection getAddRecipeDirection() {
-		return new RecipeDirection();
-	}
-	/** Initializes recipe direction data members from the recipe update direction form. */
-	@ModelAttribute(RECIPE_UPDATE_DIRECTION_FORM_NAME)
-	public RecipeDirection getUpdateRecipeDirection() {
-		return new RecipeDirection();
-	}
-	/** Initializes recipe review data members from the recipe add review form. */
-	@ModelAttribute(RECIPE_ADD_REVIEW_FORM_NAME)
-	public RecipeReview getAddRecipeReview() {
-		return new RecipeReview();
-	}
-	/** Initializes recipe review data members from the recipe edit review form. */
-	@ModelAttribute(RECIPE_EDIT_REVIEW_FORM_NAME)
-	public RecipeReview getEditRecipeReview() {
-		return new RecipeReview();
-	}
-	
 	@RequestMapping(value = SHOW_SINGLE_RECIPE_PAGE, method = RequestMethod.GET)
 	public String showRecipe(Principal principal, ModelMap model, @RequestParam(value=RECIPE_NAME_PARAM, required=true) String recipeName, @RequestParam(value=MESSAGE_PARAM, required=false) String errorMessage, 
 		@RequestParam(value=SORT_TYPE_PARAM, required=false) String sortType) {
@@ -119,7 +76,8 @@ public class SingleRecipeController {
 	}
 	
 	@RequestMapping(value=UPDATE_SINGLE_INGREDIENT, method=RequestMethod.POST)
-	public String updateSingleRecipeIngredient(@ModelAttribute(RECIPE_UPDATE_INGREDIENT_FORM_NAME) Ingredient ingredient, RedirectAttributes redirectAttrs, Principal principal) {
+	//public String updateSingleRecipeIngredient(@ModelAttribute(RECIPE_UPDATE_INGREDIENT_FORM_NAME) Ingredient ingredient, RedirectAttributes redirectAttrs, Principal principal) {
+	public String updateSingleRecipeIngredient(@ModelAttribute Ingredient ingredient, RedirectAttributes redirectAttrs, Principal principal) {
 		RecipeServiceImpl recipeService = new RecipeServiceImpl();
 		return recipeService.updateRecipeIngredientAmount(ingredient.getIngredientName(), ingredient.getIngredientListName(), ingredient.getWholeNumber(), ingredient.getIngredientFractionQuantity(), ingredient.getIngredientUnit(), ingredient.getIngredientType(), redirectAttrs, principal);
 	}
@@ -141,14 +99,14 @@ public class SingleRecipeController {
 		
 	@ResponseBody
 	@RequestMapping(value=ADD_RECIPE_INGREDIENT, method = RequestMethod.POST)
-	public ResponseEntity<String> addRecipeIngredient(Principal principal, @ModelAttribute(RECIPE_ADD_INGREDIENT_FORM_NAME) Ingredient ingredient) {
+	public ResponseEntity<String> addRecipeIngredient(Principal principal, @ModelAttribute Ingredient ingredient) {
 		RecipeServiceImpl recipeService = new RecipeServiceImpl();
 		return recipeService.addRecipeIngredient(principal, ingredient.getIngredientListName(), ingredient.getIngredientName(), ingredient.getIngredientUnit(), ingredient.getWholeNumber(), ingredient.getIngredientFractionQuantity(), ingredient.getIngredientType());
 	}
 	
 	@ResponseBody
 	@RequestMapping(value=ADD_RECIPE_DIRECTION, method = RequestMethod.POST)
-	public ResponseEntity<String> addRecipeDirection(Principal principal, @ModelAttribute(RECIPE_ADD_DIRECTION_FORM_NAME) RecipeDirection recipeDirection) {
+	public ResponseEntity<String> addRecipeDirection(Principal principal, @ModelAttribute RecipeDirection recipeDirection) {
 		RecipeServiceImpl recipeService = new RecipeServiceImpl();
 		return recipeService.addRecipeDirection(principal, recipeDirection.getRecipeName(), recipeDirection.getDirection());
 	}
@@ -161,14 +119,14 @@ public class SingleRecipeController {
 	}
 	
 	@RequestMapping(value=UPDATE_RECIPE_DIRECTION, method = RequestMethod.POST)
-	public String updateRecipeDirectionContent(Principal principal, RedirectAttributes redirectAttrs, @ModelAttribute(RECIPE_UPDATE_DIRECTION_FORM_NAME) RecipeDirection recipeDirection) {
+	public String updateRecipeDirectionContent(Principal principal, RedirectAttributes redirectAttrs, @ModelAttribute RecipeDirection recipeDirection) {
 		RecipeServiceImpl recipeService = new RecipeServiceImpl();
 		return recipeService.updateRecipeDirectionContent(principal, recipeDirection.getDirection(), String.valueOf(recipeDirection.getDirectionNumber()), recipeDirection.getRecipeName(), redirectAttrs);
 	}
 	
 	@ResponseBody
 	@RequestMapping(value=ADD_RECIPE_REVIEW, method = RequestMethod.POST)
-	public ResponseEntity<String> addRecipeReview(Principal principal, @ModelAttribute(RECIPE_ADD_REVIEW_FORM_NAME) RecipeReview recipeReview) {
+	public ResponseEntity<String> addRecipeReview(Principal principal, @ModelAttribute RecipeReview recipeReview) {
 		RecipeServiceImpl recipeService = new RecipeServiceImpl();
 		return recipeService.addRecipeReview(principal, recipeReview.getReviewContent(), String.valueOf(recipeReview.getReviewRating()), recipeReview.getReviewTitle(), recipeReview.getUserNamePosted(), recipeReview.getRecipeName());
 	}
@@ -182,7 +140,7 @@ public class SingleRecipeController {
 	}
 	
 	@RequestMapping(value=UPDATE_RECIPE_REVIEW, method = RequestMethod.POST)
-	public String updateRecipeReviewContent(Principal principal, @ModelAttribute(value=RECIPE_EDIT_REVIEW_FORM_NAME) RecipeReview recipeReview, RedirectAttributes redirectAttrs) {
+	public String updateRecipeReviewContent(Principal principal, @ModelAttribute RecipeReview recipeReview, RedirectAttributes redirectAttrs) {
 		RecipeServiceImpl recipeService = new RecipeServiceImpl();
 		return recipeService.updateRecipeReviewContent(principal, String.valueOf(recipeReview.getReviewRating()), recipeReview.getReviewContent(), String.valueOf(recipeReview.getReviewId()), recipeReview.getRecipeName(), redirectAttrs);
 	}

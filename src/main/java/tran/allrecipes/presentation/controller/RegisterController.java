@@ -31,14 +31,6 @@ public class RegisterController {
 	private static final String ERROR_PARAM = "error";
 	/** The parameter to take in a user name. */
 	private static final String USER_NAME_PARAM = "userName";
-	/** The name of the registration form. */
-	private static final String REGISTER_USER_FORM_NAME = "registerForm";
-	
-	/** Initializes data members from the registration form values. */
-	@ModelAttribute(REGISTER_USER_FORM_NAME)
-	public User getUserRegistration() {
-		return new User();
-	}
 
 	@RequestMapping(value=REGISTER_PAGE, method=RequestMethod.GET)
 	public String showRegistration(Principal principal, ModelMap model, @RequestParam(value=ERROR_PARAM, required=false) String error, RedirectAttributes redirectAttrs) {
@@ -54,7 +46,7 @@ public class RegisterController {
 	}
 	
 	@RequestMapping(value=PROCESS_REGISTRATION, method = RequestMethod.POST)
-	public String processRegistration(Principal principal, @ModelAttribute(REGISTER_USER_FORM_NAME) User user, RedirectAttributes redirectAttrs) {
+	public String processRegistration(Principal principal, @ModelAttribute User user, RedirectAttributes redirectAttrs) {
 		RegisterServiceImpl registerService = new RegisterServiceImpl();
 		return registerService.processRegistration(principal, user.getUsername(), user.getPassword(), user.getValidatePassword(), redirectAttrs);
 	}

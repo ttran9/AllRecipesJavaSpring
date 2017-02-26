@@ -16,7 +16,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.ModelMap;
@@ -53,6 +52,8 @@ public class RecipeServiceImpl {
 	private static final int RECIPE_TYPE = 200;
 	/** the showSingleRecipe page. */
 	private static final String SHOW_SINGLE_RECIPE = "showSingleRecipe";
+	/** the showSingleRecipe page. */
+	private static final String SHOW_RECIPES = "showRecipes";
 	/** redirects to the recipe page with a message. */
 	private static final String REDIRECT_TO_RECIPE = "redirect:/showSingleRecipe";
 	/** redirect to the show all recipes page with a message if specified. */
@@ -65,6 +66,43 @@ public class RecipeServiceImpl {
 	private static final String EDIT_RECIPE_PAGE = "editRecipeDetails";
 	/** The logged in user name parameter. */
 	private static final String LOGGED_IN_USER_NAME_PARAM = "loggedInName";
+	/** The title of the page attribute. */
+	private static final String PAGE_TITLE_ATTRIBUTE = "title";
+	/** The title of the page attribute value/string. */
+	private static final String PAGE_TITLE_ATTRIBUTE_STRING = "Recipes!";
+	/** The title of the page attribute value/string. */
+	private static final String SINGLE_PAGE_TITLE = "Recipe Page!";
+	/** The title of the edit recipe page. */
+	private static final String EDIT_RECIPE_PAGE_TITLE = "Edit Recipe";
+	/** A string to display for a user to go back to a recipe. */
+	private static final String BACK_TO_RECIPE_TEXT = "Go Back To Recipe";
+	/** The attribute to have a second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK = "secondNavbarLink";
+	/** The URL of the second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK_URL = "showCreateRecipe";
+	/** The attribute to display text of the second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK_TEXT_ATTRIBUTE = "secondNavbarLinkText";
+	/** The text of the second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK_TEXT = "Create Recipe!";
+	/** Attribute name to indicate if there is content on the right side of the navigation bar. */
+	private static final String RIGHT_BAR_ATTRIBUTE = "isRightBar";
+	/** Flag to indicate if there is content on the right side of the navigation bar. */
+	private static final boolean RIGHT_BAR_CONTENT = true;
+	/** Attribute name to specify the appearance of the right menu items. */
+	private static final String RIGHT_MENU_TYPE = "rightMenuType";
+	/** String to describe the appearance of the right hand side's drop down menu. */
+	private static final String RIGHT_MENU_ITEMS_APPEARANCE = "genericRightMenu";
+	/** Attribute name to display an extra options hyper link on the navigation bar. */
+	private static final String OPTIONS_ATTRIBUTE = "options";
+	/** The extra options attribute string to display on the navigation bar. */
+	private static final String OPTIONS_ATTRIBUTE_DISPLAY_VALUE = "Recipe Options";
+	/** Attribute name to provide a hyper link with sub menu items on the navigation bar for a single recipe. */
+	private static final String LEFT_MENU_TYPE_ATTRIBUTE = "leftMenuType";
+	/** The type of options as a menu of items underneath a hyper link on the navigation bar.*/
+	private static final String LEFT_MENU_TYPE = "singleRecipePage";
+	/** An object to allow form binding from the edit recipe form. */
+	private static final String EDIT_RECIPE_FORM = "editRecipeForm";
+	
 
 	public RecipeServiceImpl() {
 		// TODO Auto-generated constructor stub
@@ -1016,6 +1054,9 @@ public class RecipeServiceImpl {
 		if(principal != null) {
 			String userName = principal.getName();
 			if(userName != null) model.addAttribute(LOGGED_IN_USER_NAME_PARAM, userName);
+			model.addAttribute(SECOND_NAVBAR_LINK, SECOND_NAVBAR_LINK_URL);
+			model.addAttribute(SECOND_NAVBAR_LINK_TEXT_ATTRIBUTE, SECOND_NAVBAR_LINK_TEXT);
+			model.addAttribute(RIGHT_MENU_TYPE, RIGHT_MENU_ITEMS_APPEARANCE);
 		}
 		ApplicationContext appContext =  new ClassPathXmlApplicationContext(DATABASE_SOURCE_FILE);
 		RecipeDAOImpl recipesObject = (RecipeDAOImpl)appContext.getBean(RECIPE_DAO_BEAN_NAME);
@@ -1032,7 +1073,10 @@ public class RecipeServiceImpl {
 		if(errorMessage != null) {
 			model.addAttribute("errorMessage", errorMessage);
 		}
-		return "showRecipes";
+		
+		model.addAttribute(RIGHT_BAR_ATTRIBUTE, RIGHT_BAR_CONTENT);
+		model.addAttribute(PAGE_TITLE_ATTRIBUTE, PAGE_TITLE_ATTRIBUTE_STRING);
+		return SHOW_RECIPES;
 	}
 	
 	/**
@@ -1056,12 +1100,37 @@ public class RecipeServiceImpl {
 		// grab the reviews if any.
 		List<RecipeReview> recipeReviews = recipesObject.getRecipeReviews(recipeName);
 		
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if(principal != null) {
-			String userName = principal.getName();
-			if(userName != null) model.addAttribute(LOGGED_IN_USER_NAME_PARAM, authentication.getName());
-		}
-		if(recipe != null)  {
+		// verify if the user is logged in.
+		UtilityServiceImpl utilityService = new UtilityServiceImpl();
+		
+		if(recipe != null) {
+			String posterName = recipe.getUserOwner();
+			
+			if(utilityService.isUserAuthenticated(principal)) {
+				model.addAttribute(LOGGED_IN_USER_NAME_PARAM, principal.getName());
+				model.addAttribute(OPTIONS_ATTRIBUTE, OPTIONS_ATTRIBUTE_DISPLAY_VALUE);
+				model.addAttribute(SECOND_NAVBAR_LINK, SECOND_NAVBAR_LINK_URL);
+				model.addAttribute(SECOND_NAVBAR_LINK_TEXT_ATTRIBUTE, SECOND_NAVBAR_LINK_TEXT);
+				model.addAttribute(LEFT_MENU_TYPE_ATTRIBUTE, LEFT_MENU_TYPE);
+				model.addAttribute(RIGHT_MENU_TYPE, RIGHT_MENU_ITEMS_APPEARANCE);
+				// if the logged in user is the owner, then allow for form binding, add in necessary attributes.
+				if(posterName.equals(principal.getName())) {
+					String recipeAddIngredientForm = "recipeAddIngredientForm";
+					String recipeUpdateIngredientForm = "recipeUpdateIngredientForm";
+					model.addAttribute(recipeAddIngredientForm, new Ingredient());
+					model.addAttribute(recipeUpdateIngredientForm, new Ingredient());
+					String recipeAddDirectionForm = "recipeAddDirectionForm";
+					String recipeUpdateDirectionForm = "recipeUpdateDirectionForm";
+					model.addAttribute(recipeAddDirectionForm, new RecipeDirection());
+					model.addAttribute(recipeUpdateDirectionForm, new RecipeDirection());
+				}
+				// a logged in user should have access to be able to add reviews and modify his/her own review so allow form binding.
+				String recipeAddReviewForm = "recipeAddReviewForm";
+				String recipeEditReviewForm = "recipeEditReviewForm";
+				model.addAttribute(recipeAddReviewForm, new RecipeReview());
+				model.addAttribute(recipeEditReviewForm, new RecipeReview());
+			}
+			
 			model.addAttribute("recipeObject", recipe);
 			computeRecipeAverageRatingandTotalReviews(recipe);
 			int totalReviews = recipe.getTotalNumberOfReviews();
@@ -1080,7 +1149,6 @@ public class RecipeServiceImpl {
 				model.addAttribute("averageRating", averageRating);
 			}
 			
-			String posterName = recipe.getUserOwner();
 			if(posterName != null) model.addAttribute("userOwner", posterName);
 			
 			String prepTime = convertTimeToStringDisplay(recipe.getPrepTime());
@@ -1115,6 +1183,8 @@ public class RecipeServiceImpl {
 		}
 		
 		if(errorMessage != null) model.addAttribute("dbBoundError", errorMessage);
+		model.addAttribute(RIGHT_BAR_ATTRIBUTE, RIGHT_BAR_CONTENT);
+		model.addAttribute(PAGE_TITLE_ATTRIBUTE, SINGLE_PAGE_TITLE);
 		
 		recipesObject = null;
 		((ConfigurableApplicationContext)appContext).close();
@@ -1169,6 +1239,12 @@ public class RecipeServiceImpl {
 			model.addAttribute("prepTimeMinute", prepTimeMinute);
 			model.addAttribute("prepTimeSecond", prepTimeSecond);
 			model.addAttribute("loggedInName", principal.getName());
+			
+			model.addAttribute(SECOND_NAVBAR_LINK, SHOW_SINGLE_RECIPE + "?recipeName=" + recipeName);
+			model.addAttribute(SECOND_NAVBAR_LINK_TEXT_ATTRIBUTE, BACK_TO_RECIPE_TEXT);
+			model.addAttribute(RIGHT_MENU_TYPE, RIGHT_MENU_ITEMS_APPEARANCE);
+			model.addAttribute(EDIT_RECIPE_FORM, new Recipe());
+			model.addAttribute(PAGE_TITLE_ATTRIBUTE, EDIT_RECIPE_PAGE_TITLE);
 			
 			recipeDAO = null;
 			((ConfigurableApplicationContext)appContext).close();

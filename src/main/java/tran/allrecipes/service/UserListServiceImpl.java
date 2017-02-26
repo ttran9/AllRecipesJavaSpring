@@ -65,6 +65,36 @@ public class UserListServiceImpl implements UserListService {
 	private static final int THRESHOLD_NUMERATOR = 1;
 	/** The threshold denominator value. */
 	private static final int THRESHOLD_DENOMINATOR = 5;
+	/** The title of the page attribute. */
+	private static final String PAGE_TITLE_ATTRIBUTE = "title";
+	/** The attribute to have a second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK = "secondNavbarLink";
+	/** The URL of the second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK_URL = "showCreateRecipe";
+	/** The attribute to display text of the second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK_TEXT_ATTRIBUTE = "secondNavbarLinkText";
+	/** The text of the second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK_TEXT = "Create Recipe!";
+	/** Attribute name to indicate if there is content on the right side of the navigation bar. */
+	private static final String RIGHT_BAR_ATTRIBUTE = "isRightBar";
+	/** Flag to indicate if there is content on the right side of the navigation bar. */
+	private static final boolean RIGHT_BAR_CONTENT = true;
+	/** Attribute name to specify the appearance of the right menu items. */
+	private static final String RIGHT_MENU_TYPE = "rightMenuType";
+	/** The appearance of the right hand side's drop down menu of a shopping list. */
+	private static final String RIGHT_MENU_ITEMS_SHOPPING_LIST = "shoppingListMenu";
+	/** The appearance of the right hand side's drop down menu of a pantry list. */
+	private static final String RIGHT_MENU_ITEMS_PANTRY_LIST = "pantryListMenu";
+	/** The shopping list add ingredient form binding object. */
+	private static final String ADD_SHOPPING_LIST_INGREDIENT_FORM = "addShoppingListIngredientForm";
+	/** The shopping list update ingredient form binding object. */
+	private static final String UPDATE_SHOPPING_LIST_INGREDIENT_FORM = "updateShoppingListIngredientForm";
+	/** The pantry list add ingredient form binding object. */
+	private static final String ADD_PANTRY_LIST_INGREDIENT_FORM = "addPantryListIngredientForm";
+	/** The pantry list update ingredient form binding object. */
+	private static final String UPDATE_PANTRY_LIST_INGREDIENT_FORM = "updatePantryListIngredientForm";
+	/** The pantry list subtract ingredient form binding object. */
+	private static final String SUBTRACT_PANTRY_LIST_INGREDIENT_FORM = "subtractPantryListIngredientForm";
 	
 	public UserListServiceImpl() {
 		// TODO Auto-generated constructor stub
@@ -164,13 +194,27 @@ public class UserListServiceImpl implements UserListService {
 					model.addAttribute(MESSAGE_PARAM, errorMessage);
 				}
 				model.addAttribute("loggedInName", userName);
+				model.addAttribute(SECOND_NAVBAR_LINK_TEXT_ATTRIBUTE, SECOND_NAVBAR_LINK_TEXT);
+				model.addAttribute(SECOND_NAVBAR_LINK, SECOND_NAVBAR_LINK_URL);
+				model.addAttribute(RIGHT_BAR_ATTRIBUTE, RIGHT_BAR_CONTENT);
+				model.addAttribute(PAGE_TITLE_ATTRIBUTE, userListName);
 				shoppingListDAO = null;
 				pantryListDAO = null;
+								
 				((ConfigurableApplicationContext)appContext).close();
 				if(listTypeValue == SHOPPING_LIST_TYPE) {
+					model.addAttribute(RIGHT_MENU_TYPE, RIGHT_MENU_ITEMS_SHOPPING_LIST);
+					// form binding objects. 
+					model.addAttribute(ADD_SHOPPING_LIST_INGREDIENT_FORM, new Ingredient());
+					model.addAttribute(UPDATE_SHOPPING_LIST_INGREDIENT_FORM, new Ingredient());
 					return SHOPPING_LIST_PAGE;
 				}
 				else if(listTypeValue == PANTRY_LIST_TYPE) {
+					model.addAttribute(RIGHT_MENU_TYPE, RIGHT_MENU_ITEMS_PANTRY_LIST);
+					// form binding objects.
+					model.addAttribute(ADD_PANTRY_LIST_INGREDIENT_FORM, new PantryIngredient());
+					model.addAttribute(UPDATE_PANTRY_LIST_INGREDIENT_FORM, new PantryIngredient());
+					model.addAttribute(SUBTRACT_PANTRY_LIST_INGREDIENT_FORM, new PantryIngredient());
 					return PANTRY_LIST_PAGE;
 				}
 			}

@@ -132,3 +132,13 @@ body {
 	color: blue;
 	text-align:center;
 }
+
+/** underlines specific content. current use case is for the pantry and shopping list names. */
+.listNameStyling {
+	text-decoration: underline;
+}
+
+/** Styling for error messages. */
+.errorNotificationStyling {
+	color: #a94442;
+}

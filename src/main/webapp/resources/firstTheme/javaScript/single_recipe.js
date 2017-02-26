@@ -12,6 +12,7 @@ function ratingInput(ratingValue) {
 
 function resetForm(formName, errorMessageFieldId) {
 	var formToClear = document.getElementById(formName);
+	
 	if(formToClear === undefined || formToClear === null) {
 		document.getElementById(errorMessageFieldId).className = "alert alert-danger";
 		document.getElementById(errorMessageFieldId).innerHTML = "form could not be cleared.";
@@ -217,7 +218,7 @@ function removeListItem(id, recipeName) {
 }
 
 function addIngredient(recipeName, csrfName) {
-	
+		 
 	var ingredientAddForm = document.getElementById("addIngredientsForm");
 	var ingredientName = ingredientAddForm.elements["ingredientName"].value;
 	
@@ -235,11 +236,10 @@ function addIngredient(recipeName, csrfName) {
 	
 	var ingredientTypeOption = ingredientAddForm.elements["ingredientType"];
 	var ingredientType = ingredientTypeOption.options[ingredientTypeOption.selectedIndex].value;
-	
+
 	var csrfHidden = ingredientAddForm.elements[csrfName];
 	var currentPath = document.head.querySelector("[name=currentPath]").content;
-	
-	
+
 	if(csrfHidden === null || csrfHidden === undefined) {
 		document.getElementById("addErrorMessage").className = "alert alert-danger";
         document.getElementById("addErrorMessage").innerHTML = "Csrf token is necessary.";

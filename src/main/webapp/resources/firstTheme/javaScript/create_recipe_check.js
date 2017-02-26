@@ -84,7 +84,7 @@ function hoursCheck(wholeNumber) {
 	}
 }
 
-function validateRecipeCreate(csrfValue) {
+function validateRecipeCreate() {
 
 	// for now imageurl checking isn't done.
 	var createRecipeForm = document.getElementById("createRecipeForm");

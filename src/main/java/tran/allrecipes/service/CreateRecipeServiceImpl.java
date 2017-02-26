@@ -16,6 +16,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import tran.allrecipes.data.RecipeDAOImpl;
 import tran.allrecipes.data.UsersDAOImpl;
+import tran.allrecipes.presentation.model.Recipe;
 
 /**
  * @author Todd
@@ -36,7 +37,21 @@ public class CreateRecipeServiceImpl {
 	/** redirects to the login page. */
 	private static final String REDIRECT_TO_LOGIN = "redirect:/signin";
 	/** message parameter. */
-	private static final String MESSAGE_PARAM ="message";
+	private static final String MESSAGE_PARAM = "message";
+	/** The title of the page attribute. */
+	private static final String PAGE_TITLE_ATTRIBUTE = "title";
+	/** The title of the create recipe page. */
+	private static final String CREATE_RECIPE_PAGE_TITLE = "Create Your Own Recipe!";
+	/** Attribute name to indicate if there is content on the right side of the navigation bar. */
+	private static final String RIGHT_BAR_ATTRIBUTE = "isRightBar";
+	/** Flag to indicate if there is content on the right side of the navigation bar. */
+	private static final boolean RIGHT_BAR_CONTENT = true;
+	/** Attribute name to specify the appearance of the right menu items. */
+	private static final String RIGHT_MENU_TYPE = "rightMenuType";
+	/** String to describe the appearance of the right hand side's drop down menu. */
+	private static final String RIGHT_MENU_ITEMS_APPEARANCE = "genericRightMenu";
+	/** An object for form binding the recipe create form.  */
+	private static final String CREATE_RECIPE_FORM = "createRecipeForm";
 	
 	public CreateRecipeServiceImpl() {
 		// TODO Auto-generated constructor stub
@@ -53,6 +68,10 @@ public class CreateRecipeServiceImpl {
 	    	String userName = principal.getName();
 			if(userName != null) {
 				model.addAttribute("loggedInName", userName);
+				model.addAttribute(PAGE_TITLE_ATTRIBUTE, CREATE_RECIPE_PAGE_TITLE);
+				model.addAttribute(RIGHT_BAR_ATTRIBUTE, RIGHT_BAR_CONTENT);
+				model.addAttribute(RIGHT_MENU_TYPE, RIGHT_MENU_ITEMS_APPEARANCE);
+				model.addAttribute(CREATE_RECIPE_FORM, new Recipe());
 			}
 			if(message != null) {
 				model.addAttribute("message", message);

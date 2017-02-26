@@ -27,8 +27,20 @@ public class LoginServiceImpl {
     private static final String GENERIC_LOGIN_ERROR_MESSAGE = "an error has occurred please try again";
     /** An invalid credentials message. */
     private static final String INVALID_CREDENTIALS_ERROR_MESSAGE = "invalid login credentials";
-    /** A string to get the badcredentials exception error message. */
+    /** A string to get the bad credentials exception error message. */
     private static final String SPRING_SECURITY_LAST_EXCEPTION_STRING = "SPRING_SECURITY_LAST_EXCEPTION";
+	/** The title of the page attribute. */
+	private static final String PAGE_TITLE_ATTRIBUTE = "title";
+    /** Sign in page title. */
+	private static final String PAGE_TITLE = "Login Page!";
+	/** The attribute to have a second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK = "secondNavbarLink";
+	/** The attribute to display text of the second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK_TEXT_ATTRIBUTE = "secondNavbarLinkText";
+	/** The URL of the second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK_URL = "register";
+	/** The text of the second hyper link on the navigation bar. */
+	private static final String SECOND_NAVBAR_LINK_TEXT = "Create An Account!";
 
     public LoginServiceImpl() {}
     
@@ -47,6 +59,10 @@ public class LoginServiceImpl {
             // not logged in
         	if(errorMessage != null)
         		model.addAttribute(MESSAGE_KEY, errorMessage);
+        	
+    		model.addAttribute(SECOND_NAVBAR_LINK, SECOND_NAVBAR_LINK_URL);
+    		model.addAttribute(SECOND_NAVBAR_LINK_TEXT_ATTRIBUTE, SECOND_NAVBAR_LINK_TEXT);
+    		model.addAttribute(PAGE_TITLE_ATTRIBUTE, PAGE_TITLE);
             return SIGNIN_PAGE;
         }
     }

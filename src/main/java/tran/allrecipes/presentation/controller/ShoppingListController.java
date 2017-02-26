@@ -67,7 +67,8 @@ public class ShoppingListController {
 	}
 	
 	@RequestMapping(value=ADD_SHOPPING_LIST_INGREDIENT_URL, method=RequestMethod.POST) 
-	public String addShoppingListIngredient(Principal principal, @ModelAttribute(ADD_SHOPPING_LIST_INGREDIENT_FORM) Ingredient ingredient, RedirectAttributes redirectAttrs) {
+	//public String addShoppingListIngredient(Principal principal, @ModelAttribute(ADD_SHOPPING_LIST_INGREDIENT_FORM) Ingredient ingredient, RedirectAttributes redirectAttrs) {
+	public String addShoppingListIngredient(Principal principal, @ModelAttribute Ingredient ingredient, RedirectAttributes redirectAttrs) {
 		UserListServiceImpl shoppingListService = new UserListServiceImpl();
 		return shoppingListService.addUserListIngredient(principal, ingredient.getIngredientListName(), ingredient.getIngredientName(), ingredient.getIngredientUnit(), ingredient.getWholeNumber(), ingredient.getIngredientFractionQuantity(), 
 			ingredient.getIngredientType(), redirectAttrs, SHOPPING_LIST_TYPE);
@@ -82,7 +83,8 @@ public class ShoppingListController {
 	}
 	
 	@RequestMapping(value=UPDATE_SHOPPING_LIST_INGREDIENT_URL, method=RequestMethod.POST)
-	public String updateShoppingListIngredient(Principal principal, @ModelAttribute(UPDATE_SHOPPING_LIST_INGREDIENT_FORM) Ingredient ingredient, RedirectAttributes redirectAttrs) {
+	//public String updateShoppingListIngredient(Principal principal, @ModelAttribute(UPDATE_SHOPPING_LIST_INGREDIENT_FORM) Ingredient ingredient, RedirectAttributes redirectAttrs) {
+	public String updateShoppingListIngredient(Principal principal, @ModelAttribute Ingredient ingredient, RedirectAttributes redirectAttrs) {
 		UserListServiceImpl shoppingListService = new UserListServiceImpl();
 		return shoppingListService.updateUserListIngredient(principal, ingredient.getIngredientName(), ingredient.getIngredientListName(), ingredient.getWholeNumber(), ingredient.getIngredientFractionQuantity(), ingredient.getIngredientUnit(), 
 			ingredient.getIngredientType(), redirectAttrs, SHOPPING_LIST_TYPE);
