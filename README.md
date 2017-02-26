@@ -15,7 +15,8 @@ The below sections will be updated!
 
 # todo: (currently what I'm working on replacing)
 
-- Replace jsp files using thymeleaf.
+- refactor code.
+- styling of the pages (specificially the errors).
 
 
 
