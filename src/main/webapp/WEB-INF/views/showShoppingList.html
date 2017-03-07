@@ -21,7 +21,6 @@
 				<input id="shoppingListNameElement" type="hidden" th:value="${userListName}">
 				<div class="col-xs-12 col-sm-6">
 					<div id="ingredientRemovalInfo"></div>
-					<h1 class="listNameStyling" th:text="${userListName}"></h1>
 					<h2>Ingredients:</h2>
 					<ul id="${userListName}-ingredients-list" class="list-group">
 						<th:block th:if="${userList != null}" th:with="ingredientWholeNumber='1', ingredientMixedFraction='2', ingredientFraction='3'">

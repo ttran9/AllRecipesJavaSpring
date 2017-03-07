@@ -32,7 +32,17 @@
 					</th:block>
 				</div>
 			</div>
-		</nav>	
+		</nav>
+		<div th:if="${navShoppingList != null}">
+			<th:block th:switch="${navShoppingList}">
+				<div class="shoppingListNavbar" th:case="shoppingList">
+					<h1 th:text="${userListName}"> </h1>
+				</div>
+				<div class="pantryListNavbar" th:case="pantryList">
+					<h1 th:text="${userListName}"> </h1>
+				</div>
+			</th:block>
+		</div>	
 	</div>
 	
 	<ul class="nav navbar-nav" th:fragment="navBar">
