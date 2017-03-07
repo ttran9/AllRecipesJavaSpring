@@ -11,6 +11,7 @@ import org.apache.commons.math3.fraction.Fraction;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -95,6 +96,8 @@ public class UserListServiceImpl implements UserListService {
 	private static final String UPDATE_PANTRY_LIST_INGREDIENT_FORM = "updatePantryListIngredientForm";
 	/** The pantry list subtract ingredient form binding object. */
 	private static final String SUBTRACT_PANTRY_LIST_INGREDIENT_FORM = "subtractPantryListIngredientForm";
+	/** Attribute indicating another navbar is to be added onto the template. */
+	private static final String NAVBAR_ATTRIBUTE_ADD_ON = "navShoppingList";
 	
 	public UserListServiceImpl() {
 		// TODO Auto-generated constructor stub
@@ -207,6 +210,7 @@ public class UserListServiceImpl implements UserListService {
 					// form binding objects. 
 					model.addAttribute(ADD_SHOPPING_LIST_INGREDIENT_FORM, new Ingredient());
 					model.addAttribute(UPDATE_SHOPPING_LIST_INGREDIENT_FORM, new Ingredient());
+					model.addAttribute(NAVBAR_ATTRIBUTE_ADD_ON, "shoppingList");
 					return SHOPPING_LIST_PAGE;
 				}
 				else if(listTypeValue == PANTRY_LIST_TYPE) {
@@ -215,6 +219,7 @@ public class UserListServiceImpl implements UserListService {
 					model.addAttribute(ADD_PANTRY_LIST_INGREDIENT_FORM, new PantryIngredient());
 					model.addAttribute(UPDATE_PANTRY_LIST_INGREDIENT_FORM, new PantryIngredient());
 					model.addAttribute(SUBTRACT_PANTRY_LIST_INGREDIENT_FORM, new PantryIngredient());
+					model.addAttribute(NAVBAR_ATTRIBUTE_ADD_ON, "pantryList");
 					return PANTRY_LIST_PAGE;
 				}
 			}
@@ -226,7 +231,7 @@ public class UserListServiceImpl implements UserListService {
 	    	errorMessage = "you cannot view your pantry list unless you are logged in.";
 	    }
 	    else {
-	    	errorMessage = "unknown list typre quest";
+	    	errorMessage = "unknown list type request";
 	    }
 	    redirectAttrs.addAttribute(MESSAGE_PARAM, errorMessage);
 	    return REDIRECT_TO_LOGIN;
@@ -307,7 +312,13 @@ public class UserListServiceImpl implements UserListService {
 							int addIngredientCode = -1;
 							
 							if(listTypeValue == SHOPPING_LIST_TYPE) {
-								addIngredientCode = shoppingListDAO.addListIngredient(ingredientName, wholeNumber, numeratorValue, denominatorValue, ingredientUnit, ingredientType, listName);
+								try {
+									addIngredientCode = shoppingListDAO.addListIngredient(ingredientName, wholeNumber, numeratorValue, denominatorValue, ingredientUnit, ingredientType, listName);
+								}
+								catch(DataIntegrityViolationException e) {
+									System.out.println(e.getMessage());
+									addIngredientCode = -1;
+								}
 							}
 							else if(listTypeValue == PANTRY_LIST_TYPE) {
 								Fraction thresholdFraction = getThresholdValues(wholeNumber, numeratorValue, denominatorValue);
@@ -734,7 +745,15 @@ public class UserListServiceImpl implements UserListService {
 		}
 		
 		if(matchingIngredient == null) { // no potential clash so just simply add.
-			int addToShoppingListCode = shoppingListDAO.addListIngredient(ingredientName, newWholeNumberQuantity, newNumeratorQuantity, newDenomintorQuantity, ingredientToUpdate.getIngredientUnit(), ingredientToUpdate.getIngredientType(), shoppingListName);
+			try {
+				shoppingListDAO.addListIngredient(ingredientName, newWholeNumberQuantity, newNumeratorQuantity, newDenomintorQuantity, ingredientToUpdate.getIngredientUnit(), ingredientToUpdate.getIngredientType(), shoppingListName);
+				notificationMessage = "ingredient has been updated, threshold value has been hit and the ingredient," + ingredientName + ", has been added!";
+			}
+			catch(DataIntegrityViolationException e) {
+				System.out.println(e.getMessage());
+				notificationMessage = "an error has occured while trying to update the ingredient";
+			}
+			/*
 			if(addToShoppingListCode == 1) {
 				notificationMessage = "ingredient has been updated, threshold value has been hit and the ingredient," + ingredientName + ", has been added!";
 			}
@@ -744,6 +763,7 @@ public class UserListServiceImpl implements UserListService {
 			else if(addToShoppingListCode > 1){
 				notificationMessage = "ingredient has been updated, threshold value has been hit." + "contact an administrator if updating pantry list ingredients keeps displaying this message!";
 			}
+			*/
 		}
 		else {
 			// the ingredient already exists, now check for supported unit conversion.
@@ -788,7 +808,6 @@ public class UserListServiceImpl implements UserListService {
 					int newShoppingListIngredientWholeNumber = updatedQuantity.getNumerator() / updatedQuantity.getDenominator();
 					int newShoppingListIngredientNumerator = updatedQuantity.getNumerator() % updatedQuantity.getDenominator();
 					int newShoppingListIngredientDenominator = updatedQuantity.getDenominator();
-					int updateShoppingIngredientCode = shoppingListDAO.updateListIngredientAmount(newShoppingListIngredientWholeNumber, newShoppingListIngredientNumerator, newShoppingListIngredientDenominator, matchingIngredient.getIngredientID());
 					if(newShoppingListIngredientWholeNumber > 0 && (newShoppingListIngredientNumerator == 1 && newShoppingListIngredientDenominator == 1)) {
 						newShoppingListIngredientNumerator = 0;
 					}
@@ -796,17 +815,27 @@ public class UserListServiceImpl implements UserListService {
 						newShoppingListIngredientWholeNumber = 1;
 						newShoppingListIngredientNumerator = 0;
 					}
-					if(updateShoppingIngredientCode == 1) {
+					try {
+						shoppingListDAO.updateListIngredientAmount(newShoppingListIngredientWholeNumber, newShoppingListIngredientNumerator, newShoppingListIngredientDenominator, matchingIngredient.getIngredientID());
 						notificationMessage = "ingredient has been updated, threshold value has been hit and the ingredient," + ingredientName + ", has been added to your shopping list!";
+						/*
+						if(updateShoppingIngredientCode == 1) {
+							notificationMessage = "ingredient has been updated, threshold value has been hit and the ingredient," + ingredientName + ", has been added to your shopping list!";
+						}
+						else if(updateShoppingIngredientCode == 0) {
+							notificationMessage = "ingredient has been updated, threshold value has been hit and the ingredient," + ingredientName + ", was not added to your shopping list!";
+						}
+						else if(updateShoppingIngredientCode <= -1) {
+							notificationMessage = "ingredient has been updated, threshold value has been hit and the ingredient," + ingredientName + ", could not be added to your shopping list!";
+						}
+						else if(updateShoppingIngredientCode > 1) {
+							notificationMessage = "ingredient has been updated, threshold value has been hit and the ingredient," + ingredientName + ", has been added. If this message persists, contact an admin.";
+						}
+						*/
 					}
-					else if(updateShoppingIngredientCode == 0) {
-						notificationMessage = "ingredient has been updated, threshold value has been hit and the ingredient," + ingredientName + ", was not added to your shopping list!";
-					}
-					else if(updateShoppingIngredientCode <= -1) {
-						notificationMessage = "ingredient has been updated, threshold value has been hit and the ingredient," + ingredientName + ", could not be added to your shopping list!";
-					}
-					else if(updateShoppingIngredientCode > 1) {
-						notificationMessage = "ingredient has been updated, threshold value has been hit and the ingredient," + ingredientName + ", has been added. If this message persists, contact an admin.";
+					catch(DataIntegrityViolationException e) {
+						System.out.println(e.getMessage());
+						notificationMessage = "could not update the ingredient";
 					}
 				}
 				else {
@@ -1047,39 +1076,18 @@ public class UserListServiceImpl implements UserListService {
 	
 	
 	/**
-	 * @param recipeListMap A map of ingredients to be inserted into the shopping list.
-	 * @param updateList The list of ingredients to be updated into the shopping list.
+	 * @param insertMap A map of ingredients to be inserted into the shopping list.
+	 * @param updatedIngredientsList The list with the updated ingredient(s) quantity from the pantry or recipe list added with the current existing ingredient on the shopping list.
 	 * @param shoppingListName The name of the shopping list to add the contents to.
 	 * @return a string indicating if the transfer was successful or not.
 	 */
-	public String transferContents(HashMap<String, Ingredient> listMap, List<Ingredient> updateList, String shoppingListName) {
-		// insert the contents of the recipe list ingredients map (without any duplicates) into the shopping list.
-		int addIngredientCode = 1; 
+	public String transferContents(HashMap<String, Ingredient> insertMap, List<Ingredient> updatedIngredientsList, String shoppingListName) {
 		String notificationMessage = "";
 		ApplicationContext appContext =  new ClassPathXmlApplicationContext(DATABASE_SOURCE_FILE);
 		ShoppingListDAOImpl shoppingListDAO = (ShoppingListDAOImpl) appContext.getBean(SHOPPING_LIST_DAO_BEAN_NAME);
 		
-		for(Ingredient ingredient : listMap.values()) {
-			addIngredientCode = shoppingListDAO.addListIngredient(ingredient.getIngredientName(), Integer.parseInt(ingredient.getWholeNumber()), Integer.parseInt(ingredient.getNumerator()), Integer.parseInt(ingredient.getDenominator()), 
-					ingredient.getIngredientUnit(), ingredient.getIngredientType(), shoppingListName);
-			if(addIngredientCode != 1) {
-				notificationMessage = "could not add ingredient: " + ingredient.getIngredientName() + ". No ingredients were updated.";
-				break;
-			}
-		}
+		notificationMessage = shoppingListDAO.transferContentsTransaction(insertMap, shoppingListName, updatedIngredientsList);
 		
-		int updateIngredientCode = 1;
-		if(addIngredientCode == 1) {
-			// go through the update list and add to the shopping list using update statements.
-			// can use a stringbuilder to print a list of all the ingredient names that can not be updated?
-			for(Ingredient ingredient : updateList) {
-				updateIngredientCode = shoppingListDAO.updateListIngredientAmount(Integer.parseInt(ingredient.getWholeNumber()), Integer.parseInt(ingredient.getNumerator()), Integer.parseInt(ingredient.getDenominator()), ingredient.getIngredientID());
-				if(updateIngredientCode != 1) {
-					notificationMessage = "all ingredients were added but ingredient: " + ingredient.getIngredientName() + " could not be updated.";
-					break;
-				}
-			}
-		}
 		shoppingListDAO = null;
 		((ConfigurableApplicationContext)appContext).close();
 		return notificationMessage;
