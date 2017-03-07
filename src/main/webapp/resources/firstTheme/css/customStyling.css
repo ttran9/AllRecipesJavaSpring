@@ -142,3 +142,26 @@ body {
 .errorNotificationStyling {
 	color: #a94442;
 }
+
+/** The styling for the portion below the navigation bar. */
+.shoppingListNavbar {
+	background-color: white;
+	color: black;
+	width: 100%;
+	text-align: center;
+	margin-top: -20px; /** offset the margin bottom of the navbar. */
+	padding-top: 1px;
+	padding-bottom: 2px;
+}
+
+.pantryListNavbar {
+	background-color: #6b6b6b;
+	color: black;
+	width: 100%;
+	text-align: center;
+	margin-top: -20px; /** offset the margin bottom of the navbar. */
+	padding-top: 1px;
+	padding-bottom: 2px;
+}
+
+
