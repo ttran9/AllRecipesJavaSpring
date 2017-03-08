@@ -1,4 +1,4 @@
-## Todd's Implementation of a miniature AllRecipes website using Java Spring and JSP (soon to be Thymeleaf).
+## Todd's Implementation of a miniature AllRecipes website using Java Spring and Thymeleaf.
 The below sections will be updated!
 
 
@@ -15,8 +15,10 @@ The below sections will be updated!
 
 # todo: (currently what I'm working on replacing)
 
-- refactor code.
+- refactor code (still on going).
 - styling of the pages (specificially the errors).
+- for commit b9e6a6af101a50ea62b9c31b0717da49bf5fa409, I didn't upload have to push a modified ShoppingListTest file along which means this needs to be modified.
+- also, the registration tests are not complete, I don't explicity test for a user name that already exists which should throw an existing DataIntegrityViolation exception. I will be adding this in too.
 
 
 
