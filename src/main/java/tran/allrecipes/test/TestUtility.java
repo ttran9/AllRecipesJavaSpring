@@ -15,6 +15,7 @@ import org.apache.commons.math3.fraction.Fraction;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.web.servlet.MockMvc;
 
 import tran.allrecipes.data.PantryListDAOImpl;
@@ -120,7 +121,7 @@ public class TestUtility {
 	/** Test review contents. */
 	private static final String REVIEW_TITLE = "This is a test title";
 	/** A message to indicate that the review contents were changed but the rating stayed the same. */
-	private static final String REVIEW_CONTENT_CHANGED_RATING_SAME = "review changed, but rating stayed the same.";
+	private static final String REVIEW_CONTENT_CHANGED_RATING_SAME = "error updating the review.";
 	/** The parameter to indicate what recipe to add to. */
 	private static final String RECIPE_NAME_PARAM = "recipeName";
 	/** The parameter to set the recipe's servings value. */
@@ -447,7 +448,7 @@ public class TestUtility {
 			int cookTime  = convertTimeToSeconds(TEST_COOK_TIME);
 			int defaultNumberOfReviews = 0; // since this recipe is being created the amount of review ratings should all be zero.
 			recipeDAO.insertRecipe(recipeToAdd, OLD_TEST_SERVINGS_AMOUNT, recipeCreator, prepTime, cookTime, TEST_DISH_TYPE, TEST_URL, null, TEST_DESCRIPTION, 
-					defaultNumberOfReviews, defaultNumberOfReviews, defaultNumberOfReviews, defaultNumberOfReviews, defaultNumberOfReviews);
+					defaultNumberOfReviews, defaultNumberOfReviews, defaultNumberOfReviews, defaultNumberOfReviews, defaultNumberOfReviews, defaultNumberOfReviews, defaultNumberOfReviews);
 			usersDAOImpl.updateUserLastPostedRecipeTime(null, recipeCreator);
 		}
 		usersDAOImpl = null;
@@ -692,8 +693,14 @@ public class TestUtility {
 		String listOwner = shoppingListDAO.getUserOwnerOfList(shoppingListName);
 		if(shoppingListOwner.equals(listOwner)) { // this will be true if a shopping list exists and the owner is the same as the shopping list's owner.
 			for(Ingredient ingredient : ingredientList) {
-				shoppingListDAO.addListIngredient(ingredient.getIngredientName(), Integer.parseInt(ingredient.getWholeNumber()), Integer.parseInt(ingredient.getNumerator()), 
-					Integer.parseInt(ingredient.getDenominator()), ingredient.getIngredientUnit(), ingredient.getIngredientType(), shoppingListName);
+				try {
+					shoppingListDAO.addListIngredient(ingredient.getIngredientName(), Integer.parseInt(ingredient.getWholeNumber()), Integer.parseInt(ingredient.getNumerator()), 
+						Integer.parseInt(ingredient.getDenominator()), ingredient.getIngredientUnit(), ingredient.getIngredientType(), shoppingListName);
+				}
+				catch(DataIntegrityViolationException e) {
+					System.out.println(e.getMessage());
+					break;
+				}
 			}
 		}
 		shoppingListDAO = null;

@@ -12,11 +12,14 @@ import java.util.List;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -178,8 +181,6 @@ public class SingleRecipeTest {
 	private static final String NON_EXISTENT_RECIPE_NAME = TEST_UTILITY.getNonExistantRecipeName();
 	/** An invalid id for a review. */
 	private static final String INVALID_REVIEW_ID = TEST_UTILITY.getInvalidReviewId();
-	/** A message indicating that a review has been changed by the rating was not modified. */
-	private static final String REVIEW_UPDATE_CONTENT_CHANGED_REVIEW_SAME_MESSAGE = TEST_UTILITY.getReviewContentChangedRatingSameMessage();
 	/** An object to get access to the current class's application context. */
 	private static ClassPathXmlApplicationContext appContext;
 	/** An object to gain access to the Recipes, RecipeReviews, RecipeIngredients and RecipeDirections database tables. */
@@ -195,6 +196,8 @@ public class SingleRecipeTest {
 	private WebApplicationContext context;
 	/** Object to allow testing for Spring MVC. */
 	private MockMvc mvc;
+	@Rule
+	public ExpectedException thrown = ExpectedException.none();
 	
 	/** Initial assignment of a data member before every test. */
 	@Before
@@ -318,6 +321,8 @@ public class SingleRecipeTest {
 			modelMap = modifySingleRecipeIngredientHelper(null, TEST_INGREDIENT_NAME, EXISTING_RECIPE_NAME, TEST_INGREDIENT_WHOLE_NUMBER, TEST_INGREDIENT_FRACTION, TEST_INGREDIENT_UNIT, TEST_INGREDIENT_UPDATE_TYPE);
 			assertEquals(EXISTING_RECIPE_NAME, modelMap.get(RECIPE_NAME_PARAM));
 			deleteSingleRecipeIngredientHelper(EXPECTED_SUCCESS_CODE, String.valueOf(addedIngredient.getIngredientID()), EXISTING_RECIPE_NAME);
+			thrown.expect(DataIntegrityViolationException.class);
+			thrown.expectMessage("cannot get single ingredient with name: " + TEST_INGREDIENT_NAME + " for recipe " + EXISTING_RECIPE_NAME);
 			addedIngredient = recipesObject.getSingleIngredient(EXISTING_RECIPE_NAME, TEST_INGREDIENT_NAME);
 			assertEquals(null, addedIngredient);
 		}
@@ -573,7 +578,7 @@ public class SingleRecipeTest {
 		List<RecipeReview> reviewsList = recipesObject.getRecipeReviews(EXISTING_RECIPE_NAME);
 		RecipeReview addedReview = reviewsList.get(0);
 		String reviewId = String.valueOf(addedReview.getReviewId());
-		updateRecipeReviewHelper(REVIEW_UPDATE_CONTENT_CHANGED_REVIEW_SAME_MESSAGE, TEST_REVIEW_RATING, TEST_REVIEW_CONTENTS, reviewId, EXISTING_RECIPE_NAME, recipesObject);
+		updateRecipeReviewHelper(null, TEST_REVIEW_RATING, TEST_REVIEW_CONTENTS, reviewId, EXISTING_RECIPE_NAME, recipesObject);
 		usersDAO.updateUserLastPostedReviewTime(null, USER_NAME); // hack to get around the 30 second wait time.
 		removeRecipeReviewHelper(EXPECTED_SUCCESS_CODE, EXPECTED_EMPTY_LIST_SIZE, reviewId, TEST_REVIEW_RATING, EXISTING_RECIPE_NAME, recipesObject);
 	}
