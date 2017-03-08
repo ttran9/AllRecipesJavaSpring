@@ -14,9 +14,9 @@ import org.apache.commons.math3.fraction.Fraction;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -102,6 +102,12 @@ public class RecipeServiceImpl {
 	private static final String LEFT_MENU_TYPE = "singleRecipePage";
 	/** An object to allow form binding from the edit recipe form. */
 	private static final String EDIT_RECIPE_FORM = "editRecipeForm";
+	// column names to determine what rating column to update when adding/reviewing/updating a recipe review.
+	private static final String RECIPE_NUMBER_ONE_STAR_REVIEWS_COLUMN = "numberOneStarReviews";
+	private static final String RECIPE_NUMBER_TWO_STAR_REVIEWS_COLUMN = "numberTwoStarReviews";
+	private static final String RECIPE_NUMBER_THREE_STAR_REVIEWS_COLUMN = "numberThreeStarReviews";
+	private static final String RECIPE_NUMBER_FOUR_STAR_REVIEWS_COLUMN = "numberFourStarReviews";
+	private static final String RECIPE_NUMBER_FIVE_STAR_REVIEWS_COLUMN = "numberFiveStarReviews";
 	
 
 	public RecipeServiceImpl() {
@@ -131,24 +137,16 @@ public class RecipeServiceImpl {
 					int directionNumber = recipesObject.getNumberOfDirections(recipeName);
 					if(directionNumber >= 0) {
 						int newDirectionNumber = directionNumber + 1;
-						int insertDirectionCode = recipesObject.addRecipeDirection(newDirectionNumber, directionDescription, recipeName);
-						// use the direction number that is inserted above and recipeName to get the direction Id.
-						if(insertDirectionCode == 1) {
-							Integer recentDirectionIdCode = recipesObject.getMostRecentDirectionId(recipeName, newDirectionNumber);
-							if(recentDirectionIdCode != null) {
-								// pass the direction id and current direction number if there is a 200 status code.
-								returnCode = new ResponseEntity<String>(newDirectionNumber + "," + recentDirectionIdCode, HttpStatus.OK);
-							}
-							else {
-								returnCode = new ResponseEntity<String>("Direction added, refresh the page to see it.", HttpStatus.INTERNAL_SERVER_ERROR);
-							}
+						int recentDirectionId = recipesObject.addRecipeDirectionTransaction(newDirectionNumber, directionDescription, recipeName);
+						if(recentDirectionId != -1) {
+							returnCode = new ResponseEntity<String>(newDirectionNumber + "," + recentDirectionId, HttpStatus.OK);
 						}
 						else {
-							returnCode = new ResponseEntity<String>("Inserting direction failed.", HttpStatus.INTERNAL_SERVER_ERROR);
+							returnCode = new ResponseEntity<String>("Error adding direction.", HttpStatus.INTERNAL_SERVER_ERROR);
 						}
 					}
 					else {
-						returnCode = new ResponseEntity<String>("Cannot get number of directions", HttpStatus.INTERNAL_SERVER_ERROR);
+						returnCode = new ResponseEntity<String>("Cannot get number of directions.", HttpStatus.INTERNAL_SERVER_ERROR);
 					}
 					recipesObject = null;
 					((ConfigurableApplicationContext)appContext).close();
@@ -188,33 +186,17 @@ public class RecipeServiceImpl {
 				RecipeDAOImpl recipesObject = (RecipeDAOImpl)appContext.getBean(RECIPE_DAO_BEAN_NAME);
 				Recipe recipeToUpdate = recipesObject.getRecipe(recipeName);
 				if(recipeToUpdate != null) {
-					Integer ingredientIdValue = Integer.parseInt(directionId);
-					int deleteCode = recipesObject.removeRecipeDirection(ingredientIdValue);
-					if(deleteCode == -1) {
-						errorMessage = "direction deletion error";
-					}
-					else if(deleteCode == 0) {
-						errorMessage = "no matching direction";
+					Integer directionIdValue = Integer.parseInt(directionId);
+					int parsedDirectionNumber = Integer.parseInt(directionNumber);
+					int deleteRecipeDirectionCode = recipesObject.deleteRecipeDirectionTransaction(directionIdValue, recipeName, parsedDirectionNumber);
+					if(deleteRecipeDirectionCode == 1) {
+						redirectAttrs.addAttribute(RECIPE_NAME_PARAMETER, recipeName);
+						recipesObject = null; 
+						((ConfigurableApplicationContext)appContext).close();
+						return REDIRECT_TO_RECIPE;
 					}
 					else {
-						errorMessage = "";
-						int parsedDirectionNumber = Integer.parseInt(directionNumber);                                                                                                            
-						List<RecipeDirection> recipeDirections = recipesObject.getRecipeDirections(recipeName);
-						int returnCodeValue = -1;
-						// must do minus one as one direction item has been deleted already.
-						for(int i = parsedDirectionNumber - 1; i < recipeDirections.size(); i++) {
-							RecipeDirection modifiedDirectionsObject = recipeDirections.get(i);
-							returnCodeValue = recipesObject.updateRecipeDirection(modifiedDirectionsObject.getDirectionNumber() - 1, modifiedDirectionsObject.getDirection(), modifiedDirectionsObject.getDirectionNumber(), recipeName);
-							if(returnCodeValue != 1) {
-								errorMessage = "update recipe direction error"; 
-							}
-						}
-						recipesObject = null;
-						((ConfigurableApplicationContext)appContext).close();
-						if(errorMessage.equals("")) {
-							redirectAttrs.addAttribute(RECIPE_NAME_PARAMETER, recipeName);
-							return REDIRECT_TO_RECIPE;
-						}
+						errorMessage = "update recipe direction error"; 
 					}
 				}
 				else {
@@ -297,7 +279,7 @@ public class RecipeServiceImpl {
 	public ResponseEntity<String> addRecipeIngredient(Principal principal, String recipeName, String ingredientName, String ingredientUnit, String ingredientWholeNumber, 
 		String ingredientQuantity, String ingredientType) {
 		ResponseEntity<String> returnCode = null;
-		if(recipeName != null && ingredientName != null && ingredientUnit != null && ingredientWholeNumber != null && ingredientQuantity != null) {
+		if(recipeName != null && ingredientName != null && ingredientUnit != null && ingredientWholeNumber != null && ingredientQuantity != null && ingredientType != null) {
 		    UtilityServiceImpl utilityService = new UtilityServiceImpl();
 			if(utilityService.isOwner(principal, RECIPE_TYPE, recipeName)) {
 	    		ApplicationContext appContext =  new ClassPathXmlApplicationContext(DATABASE_SOURCE_FILE);
@@ -324,26 +306,19 @@ public class RecipeServiceImpl {
 									wholeNumber = 1;
 									numeratorValue = 0;
 								}
-								int addCode = recipesObject.addListIngredient(ingredientName, wholeNumber, numeratorValue, denominatorValue, 
-										ingredientUnit, ingredientType, recipeName);
-								if(addCode == -1)
-									returnCode = new ResponseEntity<String>("database error", HttpStatus.INTERNAL_SERVER_ERROR);
-								else if(addCode == 0)
-									returnCode = new ResponseEntity<String>("cannot add " + ingredientName, HttpStatus.INTERNAL_SERVER_ERROR);
-								else if(addCode == 1) {
-									Ingredient ingredient = recipesObject.getSingleIngredient(recipeName, ingredientName);
-									if(ingredient != null) {
-										Integer ingredientId = ingredient.getIngredientID() != 0 ? ingredient.getIngredientID() : null;
-										String ingredientDisplayType = ingredient.getDisplayType() != null ? ingredient.getDisplayType() : null; 
-										if(ingredient != null && ingredientId != null && ingredientDisplayType != null) {
-											returnCode = new ResponseEntity<String>(ingredientId + "," + ingredientDisplayType, HttpStatus.OK);
-										}
-										else
-											returnCode = new ResponseEntity<String>("error retrieving the added ingredient.", HttpStatus.INTERNAL_SERVER_ERROR);
+								Ingredient returnedIngredient = recipesObject.addRecipeIngredientTransaction(ingredientName, wholeNumber, numeratorValue, denominatorValue, ingredientUnit, ingredientType, recipeName);
+								if(returnedIngredient != null) {
+									Integer ingredientId = returnedIngredient.getIngredientID() != 0 ? returnedIngredient.getIngredientID() : null;
+									String ingredientDisplayType = returnedIngredient.getDisplayType() != null ? returnedIngredient.getDisplayType() : null; 
+									if(ingredientId != null && ingredientDisplayType != null) {
+										returnCode = new ResponseEntity<String>(ingredientId + "," + ingredientDisplayType, HttpStatus.OK);
 									}
 									else {
-										returnCode = new ResponseEntity<String>("error retrieving the added ingredient: " + ingredientName, HttpStatus.INTERNAL_SERVER_ERROR);
+										returnCode = new ResponseEntity<String>("error retrieving the added ingredient, refresh your page to see the added ingredient.", HttpStatus.INTERNAL_SERVER_ERROR);
 									}
+								}
+								else {
+									returnCode = new ResponseEntity<String>("error adding the ingredient.", HttpStatus.INTERNAL_SERVER_ERROR);
 								}
 							}
 						}
@@ -440,7 +415,7 @@ public class RecipeServiceImpl {
 					String[] parsedFractionInput = fractionInput.split("/");
 					if(parsedFractionInput.length == 2) {
 						if(parsedFractionInput[0] != null && parsedFractionInput[1] != null) {
-							int updateCode = -2;
+							int updateCode = -1;
 							
 							Integer ingredientId = recipesObject.getIngredientId(recipeName, ingredientName);
 							String errorCheckString = null;
@@ -461,7 +436,13 @@ public class RecipeServiceImpl {
 										wholeNumber = 1;
 										numerator = 0;
 									}
-									updateCode = recipesObject.updateListIngredient(wholeNumber, numerator, denominator, ingredientUnit, ingredientType, ingredientId);
+									try {
+										updateCode = recipesObject.updateListIngredient(wholeNumber, numerator, denominator, ingredientUnit, ingredientType, ingredientId);
+									}
+									catch(DataIntegrityViolationException e) {
+										updateCode = -1;
+										System.out.println(e.getMessage());
+									}
 								}
 							}
 							if(updateCode == 1) {
@@ -531,48 +512,19 @@ public class RecipeServiceImpl {
 						
 						List<Ingredient> ingredientsToModify = recipesObject.getListIngredients(recipeName);
 						Fraction refactorFraction = new Fraction(newServingsParsed, oldServingsParsed);
-						Fraction oldQuantity = null;
-						boolean wasUpdated = true;
-						
 						int updateCode = -1;
 						
 						if(ingredientsToModify != null) {
-							for(Ingredient ingredients : ingredientsToModify) {
-								
-								int oldWholeNumber = Integer.parseInt(ingredients.getWholeNumber());
-								int oldNumerator = Integer.parseInt(ingredients.getNumerator());
-								int oldDenominator = Integer.parseInt(ingredients.getDenominator());
-								
-								oldQuantity = new Fraction((oldDenominator * oldWholeNumber) + oldNumerator, oldDenominator);
-								
-								errorMessage = utilityService.validateUserInput(oldWholeNumber, oldNumerator, oldDenominator);
-								if(!errorMessage.equals("")) {
-									wasUpdated = false;
-									break;
-								}
-								
-								oldQuantity = oldQuantity.multiply(refactorFraction);
-								
-								int newWholeNumber = oldQuantity.getNumerator() / oldQuantity.getDenominator();
-								int newNumerator = oldQuantity.getNumerator() % oldQuantity.getDenominator();
-								int newDenominator = oldQuantity.getDenominator();
-								
-								updateCode = recipesObject.updateListIngredient(newWholeNumber, newNumerator, newDenominator, ingredients.getIngredientUnit(), ingredients.getIngredientType(), ingredients.getIngredientID());
-								if(updateCode != 1) {
-									wasUpdated = false;
-									errorMessage = "could not update an ingredient's quantity.";
-									break;
-								}
-							}
-							if(wasUpdated) {
-								updateCode = recipesObject.updateRecipeServings(Integer.parseInt(newServings), recipeName);
-							}
+							updateCode = recipesObject.modifyRecipeIngredientsTransaction(ingredientsToModify, refactorFraction, newServings, recipeName);
 						}
 						if(updateCode == 1) {
 							recipesObject = null;
 							((ConfigurableApplicationContext)appContext).close();
 							redirectAttrs.addAttribute(RECIPE_NAME_PARAMETER, recipeName);
 							return REDIRECT_TO_RECIPE;
+						}
+						else {
+							errorMessage = "Cannot update recipe ingredients for this recipe.";
 						}
 					}
 					else {
@@ -608,124 +560,88 @@ public class RecipeServiceImpl {
 	 * @param recipeName The recipe the review is being written about.
 	 * @return An object with an HTTP status code indicating if the review was updated or not.
 	 */
-	public ResponseEntity<String> addRecipeReview(Principal principal, String reviewContent, String recipeRating, String reviewTitle,  String userPostedBy, String recipeName) {
+	public ResponseEntity<String> addRecipeReview(Principal principal, String reviewContent, String recipeRating, String reviewTitle, String userPostedBy, String recipeName) {
 		ResponseEntity<String> returnCode = null;
 		// add to the recipe rating of the recipes.
 		if(reviewContent != null && recipeRating != null && reviewTitle != null && userPostedBy != null && recipeName != null) {
-			LocalDateTime currentTime = Timestamp.from(Instant.now()).toLocalDateTime();
-			ApplicationContext appContext =  new ClassPathXmlApplicationContext(DATABASE_SOURCE_FILE);
-			RecipeDAOImpl recipesObject = (RecipeDAOImpl)appContext.getBean(RECIPE_DAO_BEAN_NAME);
-			UsersDAOImpl usersDAO = (UsersDAOImpl) appContext.getBean(USER_DAO_BEAN_NAME);
-			UtilityServiceImpl utilityService = new UtilityServiceImpl();
-		    if(utilityService.isUserAuthenticated(principal)) {
-		    	LocalDateTime lastPostedReviewTime = usersDAO.getLastPostedReviewTime(userPostedBy);
-		    	if(utilityService.canUserModify(lastPostedReviewTime, currentTime)) {
-					Recipe recipeToUpdate = recipesObject.getRecipe(recipeName);
-					if(recipeToUpdate != null) {
-						int recipeRatingParsed = Integer.parseInt(recipeRating);
-						int addRecipeReviewCode = -1;
-						
-						if(recipeRatingParsed > 0 && recipeRatingParsed <= 5) {
-							addRecipeReviewCode = recipesObject.addRecipeReview(reviewContent, recipeRatingParsed, reviewTitle, currentTime, currentTime, userPostedBy, recipeName);
-						}
-						
-						if(addRecipeReviewCode == 1) {
-							int modifyLastReviewTimeCode = usersDAO.updateUserLastPostedReviewTime(currentTime, userPostedBy);
-							if(modifyLastReviewTimeCode != 1) {
-								// send an email to myself with the problem.
-								GmailService emailService = new GmailService();
-								String emailSubject = "AR: Add Review Issue";
-								String bodyText = "User: " + userPostedBy + " has added a review but the reviewPostedTime column is not able to be updated.";
-								emailService.sendEmail(bodyText, utilityService.getAdminUserNames(), emailSubject);
-								emailService = null;
+			int recipeRatingParsed = Integer.parseInt(recipeRating);
+			if((recipeRatingParsed > 0 && recipeRatingParsed <= 5)) {
+				LocalDateTime currentTime = Timestamp.from(Instant.now()).toLocalDateTime();
+				ApplicationContext appContext =  new ClassPathXmlApplicationContext(DATABASE_SOURCE_FILE);
+				RecipeDAOImpl recipesObject = (RecipeDAOImpl)appContext.getBean(RECIPE_DAO_BEAN_NAME);
+				UsersDAOImpl usersDAO = (UsersDAOImpl) appContext.getBean(USER_DAO_BEAN_NAME);
+				UtilityServiceImpl utilityService = new UtilityServiceImpl();
+			    if(utilityService.isUserAuthenticated(principal)) {
+			    	LocalDateTime lastPostedReviewTime = usersDAO.getLastPostedReviewTime(userPostedBy);
+			    	if(utilityService.canUserModify(lastPostedReviewTime, currentTime)) {
+						Recipe recipeToUpdate = recipesObject.getRecipe(recipeName);
+						if(recipeToUpdate != null) {
+							String ratingColumnName = "";
+							int updatedReviewQuantity = 0;
+							int totalReviewSum = computeTotalSummation(recipeToUpdate);
+							int newTotalNumberOfReviews = recipeToUpdate.getTotalNumberOfReviews() + 1;
+												
+							if(recipeRatingParsed == 1) {
+								updatedReviewQuantity = recipeToUpdate.getNumberOneStarReviews() + 1;
+								ratingColumnName = RECIPE_NUMBER_ONE_STAR_REVIEWS_COLUMN;
+								totalReviewSum += 1;
 							}
-							// now you must be able to get the review's id and send it back to the ajax call.
-							Integer getRecipeReviewIdCode = recipesObject.getSingleRecipeReviewId(userPostedBy, recipeName);
+							else if(recipeRatingParsed == 2) {
+								updatedReviewQuantity = recipeToUpdate.getNumberTwoStarReviews() + 1;
+								ratingColumnName = RECIPE_NUMBER_TWO_STAR_REVIEWS_COLUMN;
+								totalReviewSum += 2;
+							}
+							else if(recipeRatingParsed == 3) {
+								updatedReviewQuantity = recipeToUpdate.getNumberThreeStarReviews() + 1;
+								ratingColumnName = RECIPE_NUMBER_THREE_STAR_REVIEWS_COLUMN;
+								totalReviewSum += 3;
+							}
+							else if(recipeRatingParsed == 4) {
+								updatedReviewQuantity = recipeToUpdate.getNumberFourStarReviews() + 1;
+								ratingColumnName = RECIPE_NUMBER_FOUR_STAR_REVIEWS_COLUMN;
+								totalReviewSum += 4;
+							}
+							else if(recipeRatingParsed == 5) {
+								updatedReviewQuantity = recipeToUpdate.getNumberFiveStarReviews() + 1;
+								ratingColumnName = RECIPE_NUMBER_FIVE_STAR_REVIEWS_COLUMN;
+								totalReviewSum += 5;
+							}
 							
-							if(getRecipeReviewIdCode != null) {
-								// since the review is added, update the rating in the recipe table.
-								Recipe recipeObject = recipesObject.getRecipe(recipeName);
-								
-								int updateRatingCode = -1;
-								int updatedReviewQuantity = 0;
-								
-								if(recipeRatingParsed == 1) {
-									updatedReviewQuantity = recipeObject.getNumberOneStarReviews() + 1;
-									updateRatingCode = recipesObject.updateRecipeOneStarRating(updatedReviewQuantity, recipeName);
-								}
-								else if(recipeRatingParsed == 2) {
-									updatedReviewQuantity = recipeObject.getNumberTwoStarReviews() + 1;
-									updateRatingCode = recipesObject.updateRecipeTwoStarRating(updatedReviewQuantity, recipeName);
-								}
-								else if(recipeRatingParsed == 3) {
-									updatedReviewQuantity = recipeObject.getNumberThreeStarReviews() + 1;
-									updateRatingCode = recipesObject.updateRecipeThreeStarRating(updatedReviewQuantity, recipeName);					
-								}
-								else if(recipeRatingParsed == 4) {
-									updatedReviewQuantity = recipeObject.getNumberFourStarReviews() + 1;
-									updateRatingCode = recipesObject.updateRecipeFourStarRating(updatedReviewQuantity, recipeName);
-								}
-								else if(recipeRatingParsed == 5) {
-									updatedReviewQuantity = recipeObject.getNumberFiveStarReviews() + 1;
-									updateRatingCode = recipesObject.updateRecipeFiveStarRating(updatedReviewQuantity, recipeName);
-								}
-								
-								if(updateRatingCode > 0) {
-									// now get this review and get the time it was posted at and return that.
-									RecipeReview addedRecipeReview = recipesObject.getRecipeReview(getRecipeReviewIdCode);
-									if(addedRecipeReview != null && addedRecipeReview.getParsedReviewPostedTime() != null) {
-										Recipe updatedRecipe = recipesObject.getRecipe(recipeName);
-										
-										// recompute the average.
-										int numberOneStarReviews = updatedRecipe.getNumberOneStarReviews();
-										int numberTwoStarReviews = updatedRecipe.getNumberTwoStarReviews();
-										int numberThreeStarReviews = updatedRecipe.getNumberThreeStarReviews();
-										int numberFourStarReviews = updatedRecipe.getNumberFourStarReviews();
-										int numberFiveStarReviews = updatedRecipe.getNumberFiveStarReviews();
-										
-										int totalReviews = numberOneStarReviews + numberTwoStarReviews + numberThreeStarReviews + numberFourStarReviews + numberFiveStarReviews;
-										
-										DecimalFormat ratingFormat = new DecimalFormat("#.#");
-										double summationValue = (double) ((numberOneStarReviews * 1) + (numberTwoStarReviews * 2) + (numberThreeStarReviews * 3) + (numberFourStarReviews * 4) + (numberFiveStarReviews * 5));
-										
-										double averageValue = Double.valueOf(ratingFormat.format(((double)summationValue / (double)totalReviews)));
-										
-										returnCode = new ResponseEntity<String>(getRecipeReviewIdCode + "," + addedRecipeReview.getParsedReviewPostedTime() + "," + averageValue + "," + totalReviews + "," + updatedReviewQuantity, HttpStatus.OK);
-									}
-									else {
-										returnCode = new ResponseEntity<String>("error getting the added recipe review's time, refresh your page to see the change.", HttpStatus.INTERNAL_SERVER_ERROR);
-									}
-								}
-								else {
-									returnCode = new ResponseEntity<String>("error updating the recipe rating amount, refresh your page to see the change.", HttpStatus.INTERNAL_SERVER_ERROR);
-								}
+							DecimalFormat ratingFormat = new DecimalFormat("#.#");
+							double newAverageRating = Double.valueOf(ratingFormat.format(((double)totalReviewSum / (double)newTotalNumberOfReviews)));
+							
+							int addReviewTransactionCode = recipesObject.addReviewTransaction(reviewContent, recipeRatingParsed, reviewTitle, currentTime, userPostedBy, recipeName, usersDAO, ratingColumnName, updatedReviewQuantity, newAverageRating, newTotalNumberOfReviews);
+							if(addReviewTransactionCode == 1) {
+								Integer getRecipeReviewIdCode = recipesObject.getSingleRecipeReviewId(userPostedBy, recipeName); // the recipe has been added with no issues.
+								RecipeReview addedRecipeReview = recipesObject.getRecipeReview(getRecipeReviewIdCode); // get the posted time in a readable format.
+								returnCode = new ResponseEntity<String>(getRecipeReviewIdCode + "," + addedRecipeReview.getParsedReviewPostedTime() + "," + newAverageRating + "," + newTotalNumberOfReviews + "," + updatedReviewQuantity, HttpStatus.OK);
 							}
 							else {
-								returnCode = new ResponseEntity<String>("could not get the recipe review's id, refresh your page to see the change.", HttpStatus.INTERNAL_SERVER_ERROR);
+								returnCode = new ResponseEntity<String>("an error adding the review.", HttpStatus.INTERNAL_SERVER_ERROR);
 							}
 						}
 						else {
-							returnCode = new ResponseEntity<String>("could not add the recipe review, make sure you have entered valid input.", HttpStatus.INTERNAL_SERVER_ERROR);
+							returnCode = new ResponseEntity<String>("cannot find the recipe you are trying to add a review to.", HttpStatus.INTERNAL_SERVER_ERROR);
 						}
-					}
-					else {
-						returnCode = new ResponseEntity<String>("cannot find the recipe you are trying to add a review to.", HttpStatus.INTERNAL_SERVER_ERROR);
-					}
-		    	}
-		    	else {
-		    		returnCode = new ResponseEntity<String>("you must wait 30 seconds before being able to write/delete/edit another review.", HttpStatus.INTERNAL_SERVER_ERROR);
-		    	}
-		    }
-		    else {
-		    	returnCode = new ResponseEntity<String>("you are not logged in so you cannot create a review.", HttpStatus.UNAUTHORIZED);
-		    }
-		    utilityService = null;
-			recipesObject = null;
-			usersDAO = null;
-			((ConfigurableApplicationContext)appContext).close();
+			    	}
+			    	else {
+			    		returnCode = new ResponseEntity<String>("you must wait 30 seconds before being able to write/delete/edit another review.", HttpStatus.INTERNAL_SERVER_ERROR);
+			    	}
+			    }
+			    else {
+			    	returnCode = new ResponseEntity<String>("you are not logged in so you cannot create a review.", HttpStatus.UNAUTHORIZED);
+			    }
+			    utilityService = null;
+				recipesObject = null;
+				usersDAO = null;
+				((ConfigurableApplicationContext)appContext).close();
+			}
+			else {
+				returnCode = new ResponseEntity<String>("Invalid rating value.", HttpStatus.NOT_ACCEPTABLE);
+			}
 		}
 		else {
-			returnCode = new ResponseEntity<String>("Fields must be filled out properly", HttpStatus.NOT_ACCEPTABLE);
+			returnCode = new ResponseEntity<String>("Fields must be filled out properly.", HttpStatus.NOT_ACCEPTABLE);
 		}
 		return returnCode;
 	}	
@@ -735,136 +651,112 @@ public class RecipeServiceImpl {
 	 * @param reviewId The unique identifier of the review to be removed.
 	 * @param reviewRating The rating of the review to be removed, used to compute the new average.
 	 * @param recipeName The name of the recipe with the review to be deleted.
-	 * @return The recipe page displaying the recipe with the reviewd removed and if unsuccessful a message indicating that the review could not be deleted.
+	 * @return The recipe page displaying the recipe with the review removed and if unsuccessful a message indicating that the review could not be deleted.
 	 */
 	public ResponseEntity<String> deleteRecipeReview(Principal principal, String reviewId, String reviewRating, String recipeName) {
-		System.out.println("TESTING " + SecurityContextHolder.getContext().getAuthentication());
 		ResponseEntity<String> returnCode = null;
 		if(reviewId != null && reviewRating != null && recipeName != null) {
-			LocalDateTime currentTime = Timestamp.from(Instant.now()).toLocalDateTime();
-			ApplicationContext appContext =  new ClassPathXmlApplicationContext(DATABASE_SOURCE_FILE);
-			RecipeDAOImpl recipesObject = (RecipeDAOImpl)appContext.getBean(RECIPE_DAO_BEAN_NAME);
-			UsersDAOImpl usersDAO = (UsersDAOImpl) appContext.getBean(USER_DAO_BEAN_NAME);
-			UtilityServiceImpl utilityService = new UtilityServiceImpl();
-			Recipe recipeToUpdate = recipesObject.getRecipe(recipeName);
-			Integer reviewIdValue = Integer.parseInt(reviewId);
-		    if(recipeToUpdate != null) {
-		    	RecipeReview reviewTomodify = recipesObject.getRecipeReview(reviewIdValue);
-		    	if(reviewTomodify != null) {
-		    		if(utilityService.doesUserOwnReview(principal, reviewTomodify.getUserNamePosted())) {
-		    			String userName = principal.getName();
-						LocalDateTime lastReviewedTime = usersDAO.getLastPostedReviewTime(userName);
-						if(utilityService.canUserModify(lastReviewedTime, currentTime)) {
-							int deleteCode = recipesObject.deleteRecipeReview(reviewIdValue);
-							if(deleteCode == -1)
-								returnCode = new ResponseEntity<String>("review deletion error", HttpStatus.INTERNAL_SERVER_ERROR);
-							else if(deleteCode == 0)
-								returnCode = new ResponseEntity<String>("no matching review", HttpStatus.INTERNAL_SERVER_ERROR);
-							else {
-								// modify the time that the user has last posted a review.
-								int modifyLastReviewTimeCode = usersDAO.updateUserLastPostedReviewTime(currentTime, userName);
-								if(modifyLastReviewTimeCode != 1) {
-									// send an email to myself with the problem.
-									GmailService emailService = new GmailService();
-									String emailSubject = "AR: Delete Review Issue";
-									String bodyText = "User: " + userName + " has deleted a review but the reviewPostedTime column is not able to be updated.";
-									emailService.sendEmail(bodyText, utilityService.getAdminUserNames(), emailSubject);
-									emailService = null;
-								}
-								Integer ratingValue = Integer.parseInt(reviewRating);
-								int updateRatingCode = -1;
-								Recipe updatedRecipe = recipesObject.getRecipe(recipeName);
-								int updatedReviewQuantity = 0;
+			Integer ratingValue = Integer.parseInt(reviewRating);
+			if((ratingValue > 0 && ratingValue <= 5)) {
+				LocalDateTime currentTime = Timestamp.from(Instant.now()).toLocalDateTime();
+				ApplicationContext appContext =  new ClassPathXmlApplicationContext(DATABASE_SOURCE_FILE);
+				RecipeDAOImpl recipesObject = (RecipeDAOImpl)appContext.getBean(RECIPE_DAO_BEAN_NAME);
+				UsersDAOImpl usersDAO = (UsersDAOImpl) appContext.getBean(USER_DAO_BEAN_NAME);
+				UtilityServiceImpl utilityService = new UtilityServiceImpl();
+				Recipe recipeToUpdate = recipesObject.getRecipe(recipeName);
+				Integer reviewIdValue = Integer.parseInt(reviewId);
+				if(recipeToUpdate != null) {
+					RecipeReview reviewTomodify = recipesObject.getRecipeReview(reviewIdValue);
+					if(reviewTomodify != null) {
+						if(utilityService.doesUserOwnReview(principal, reviewTomodify.getUserNamePosted())) {
+							String userName = principal.getName();
+							LocalDateTime lastReviewedTime = usersDAO.getLastPostedReviewTime(userName);
+							if(utilityService.canUserModify(lastReviewedTime, currentTime)) {
+								String ratingColumnName = ""; // the column name to subtract one rating from.
+								int updatedReviewQuantity = 0; // the amount of the rating.
+								
+								int totalReviewSum = computeTotalSummation(recipeToUpdate);
+								int newTotalNumberOfReviews = recipeToUpdate.getTotalNumberOfReviews() -1;
 								
 								if(ratingValue == 1) {
-									int numOneStarReviews = updatedRecipe.getNumberOneStarReviews();
+									int numOneStarReviews = recipeToUpdate.getNumberOneStarReviews();
 									if(numOneStarReviews > 0) {
-										numOneStarReviews = numOneStarReviews - 1;
-										updateRatingCode = recipesObject.updateRecipeOneStarRating(numOneStarReviews, recipeName);
-										updatedReviewQuantity = numOneStarReviews;
+										updatedReviewQuantity = recipeToUpdate.getNumberOneStarReviews() - 1;
+										ratingColumnName = RECIPE_NUMBER_ONE_STAR_REVIEWS_COLUMN;
+										totalReviewSum -= 1;
 									}
 								}
 								else if(ratingValue == 2) {
-									int numTwoStarReviews = updatedRecipe.getNumberTwoStarReviews();
+									int numTwoStarReviews = recipeToUpdate.getNumberTwoStarReviews();
 									if(numTwoStarReviews > 0) {
-										numTwoStarReviews = numTwoStarReviews - 1;
-										updateRatingCode = recipesObject.updateRecipeTwoStarRating(numTwoStarReviews, recipeName);
-										updatedReviewQuantity = numTwoStarReviews;
+										updatedReviewQuantity = recipeToUpdate.getNumberTwoStarReviews() - 1;
+										ratingColumnName = RECIPE_NUMBER_TWO_STAR_REVIEWS_COLUMN;
+										totalReviewSum -= 2;
 									}
 								}
 								else if(ratingValue == 3) {
-									int numThreeStarReviews = updatedRecipe.getNumberThreeStarReviews();
+									int numThreeStarReviews = recipeToUpdate.getNumberThreeStarReviews();
 									if(numThreeStarReviews > 0) {
-										numThreeStarReviews = numThreeStarReviews - 1;
-										updateRatingCode = recipesObject.updateRecipeThreeStarRating(numThreeStarReviews, recipeName);
-										updatedReviewQuantity = numThreeStarReviews;
+										updatedReviewQuantity = recipeToUpdate.getNumberThreeStarReviews() - 1;
+										ratingColumnName = RECIPE_NUMBER_THREE_STAR_REVIEWS_COLUMN;
+										totalReviewSum -= 3;
 									}
 								}
 								else if(ratingValue == 4) {
-									int numFourStarReviews = updatedRecipe.getNumberFourStarReviews();
+									int numFourStarReviews = recipeToUpdate.getNumberFourStarReviews();
 									if(numFourStarReviews > 0) {
-										numFourStarReviews = numFourStarReviews - 1;
-										updateRatingCode = recipesObject.updateRecipeFourStarRating(numFourStarReviews, recipeName);
-										updatedReviewQuantity = numFourStarReviews;
+										updatedReviewQuantity = recipeToUpdate.getNumberFourStarReviews() - 1;
+										ratingColumnName = RECIPE_NUMBER_FOUR_STAR_REVIEWS_COLUMN;
+										totalReviewSum -= 4;
 									}
 								}
 								else if(ratingValue == 5) {
-									int numFiveStarReviews = updatedRecipe.getNumberFiveStarReviews();
+									int numFiveStarReviews = recipeToUpdate.getNumberFiveStarReviews();
 									if(numFiveStarReviews > 0) {
-										numFiveStarReviews = numFiveStarReviews - 1;
-										updateRatingCode = recipesObject.updateRecipeFiveStarRating(numFiveStarReviews, recipeName);
-										updatedReviewQuantity = numFiveStarReviews;
+										updatedReviewQuantity = recipeToUpdate.getNumberFiveStarReviews() - 1;
+										ratingColumnName = RECIPE_NUMBER_FIVE_STAR_REVIEWS_COLUMN;
+										totalReviewSum -= 5;
 									}
 								}
 								
-								if(updateRatingCode == 1) {
-									Recipe recipeObject = recipesObject.getRecipe(recipeName);
-									
-									if(recipeObject != null) {
-										computeRecipeAverageRatingandTotalReviews(recipeObject);
-										int totalReviews = recipeObject.getTotalNumberOfReviews();
-										double averageRating = recipeObject.getAverageRating();
-										
-										if(totalReviews > 0) {
-											returnCode = new ResponseEntity<String>(averageRating + "," + updatedReviewQuantity + "," + totalReviews, HttpStatus.OK);
-										}
-										else {
-											returnCode = new ResponseEntity<String>(0 + "," + updatedReviewQuantity + "," + totalReviews, HttpStatus.OK);
-										}
-									}
-									else {
-										returnCode = new ResponseEntity<String>("could not get the new average rating and review values, refresh your page to see the changes.", HttpStatus.INTERNAL_SERVER_ERROR);
-									}
+								DecimalFormat ratingFormat = new DecimalFormat("#.#");
+								double newAverageRating = Double.valueOf(ratingFormat.format(((double)totalReviewSum / (double)newTotalNumberOfReviews)));
+								
+								int removeReviewTransactionCode = recipesObject.removeReviewTransaction(reviewIdValue, usersDAO, currentTime, userName, ratingColumnName, updatedReviewQuantity, recipeName, newAverageRating, newTotalNumberOfReviews);
+								if(removeReviewTransactionCode == 1) {
+									returnCode = new ResponseEntity<String>(newAverageRating + "," + updatedReviewQuantity + "," + newTotalNumberOfReviews, HttpStatus.OK);
 								}
 								else {
-									returnCode = new ResponseEntity<String>("could not update the rating, refresh your page to see the changes.", HttpStatus.INTERNAL_SERVER_ERROR);
+									returnCode = new ResponseEntity<String>("error removing the review.", HttpStatus.INTERNAL_SERVER_ERROR);
 								}
-								updatedRecipe = null;
+							}
+							else {
+								returnCode = new ResponseEntity<String>("you must wait 30 seconds after deleting/writing/editing a review to remove one.", HttpStatus.INTERNAL_SERVER_ERROR);
 							}
 						}
 						else {
-			    			returnCode = new ResponseEntity<String>("you must wait 30 seconds after deleting/writing/editing a review to remove one.", HttpStatus.INTERNAL_SERVER_ERROR);
-			    		}
-		    		}
-					else {
-						returnCode = new ResponseEntity<String>("you must be the owner of the review to remove it.", HttpStatus.UNAUTHORIZED);
+							returnCode = new ResponseEntity<String>("you must be the owner of the review to remove it.", HttpStatus.UNAUTHORIZED);
+						}
 					}
-		    	}
-		    	else {
-		    		returnCode = new ResponseEntity<String>("cannot get the review.", HttpStatus.INTERNAL_SERVER_ERROR);
-		    	}
-		    }
-		    else {
-		    	returnCode = new ResponseEntity<String>("cannot get the recipe.", HttpStatus.INTERNAL_SERVER_ERROR);
-		    }
-			recipeToUpdate = null;
-			utilityService = null;
-			usersDAO = null;
-			recipesObject = null;
-			((ConfigurableApplicationContext)appContext).close();
+					else {
+						returnCode = new ResponseEntity<String>("cannot get the review.", HttpStatus.INTERNAL_SERVER_ERROR);
+					}
+				}
+				else {
+					returnCode = new ResponseEntity<String>("cannot get the recipe.", HttpStatus.INTERNAL_SERVER_ERROR);
+				}
+				recipeToUpdate = null;
+				utilityService = null;
+				usersDAO = null;
+				recipesObject = null;
+				((ConfigurableApplicationContext)appContext).close();
+			}
+			else {
+				returnCode = new ResponseEntity<String>("invalid rating value.", HttpStatus.NOT_ACCEPTABLE);
+			}
 		}
 		else {
-			returnCode = new ResponseEntity<String>("invalid parameters", HttpStatus.NOT_ACCEPTABLE);
+			returnCode = new ResponseEntity<String>("invalid parameters.", HttpStatus.NOT_ACCEPTABLE);
 		}
 		return returnCode;
 	}
@@ -896,85 +788,97 @@ public class RecipeServiceImpl {
 			if(recipeToUpdate != null) {
 				if(reviewTomodify != null) {
 					int newRecipeRating = Integer.parseInt(recipeRating);
-					// must check if the person modifying the review is the person that wrote the review, not necessarily the person that created the recipe.
-					int oldRating = reviewTomodify.getReviewRating();
-					if(utilityService.doesUserOwnReview(principal, reviewTomodify.getUserNamePosted())) {
-						String userName = principal.getName(); 
-						LocalDateTime lastReviewedTime = usersDAO.getLastPostedReviewTime(userName);
-						if(utilityService.canUserModify(lastReviewedTime, currentTime)) {
-							int recipeReviewUpdateCode = recipesObject.updateRecipeReview(newRecipeRating, reviewContent, currentTime, reviewIdValue);
-							
-							if(recipeReviewUpdateCode == 1) {
-								int modifyLastReviewTimeCode = usersDAO.updateUserLastPostedReviewTime(currentTime, userName);
-								if(modifyLastReviewTimeCode != 1) {
-									// send an email to myself with the problem.
-									GmailService emailService = new GmailService();
-									String emailSubject = "AR: Edit Review Issue";
-									String bodyText = "User: " + userName + " has edited a review but the reviewPostedTime column is not able to be updated.";
-									emailService.sendEmail(bodyText, utilityService.getAdminUserNames(), emailSubject);
-									emailService = null;
-								}
-	
+					if(newRecipeRating > 0 && newRecipeRating <= 5) {
+						int oldRating = reviewTomodify.getReviewRating();
+						// must check if the person modifying the review is the person that wrote the review, not necessarily the person that created the recipe.
+						if(utilityService.doesUserOwnReview(principal, reviewTomodify.getUserNamePosted())) {
+							String userName = principal.getName(); 
+							LocalDateTime lastReviewedTime = usersDAO.getLastPostedReviewTime(userName);
+							int updateReviewCode = -1;
+							if(utilityService.canUserModify(lastReviewedTime, currentTime)) {
 								if(oldRating != newRecipeRating) {
-									int updateReviewCountCode = -1;
-									// must increment and decrement ratings.
+									int totalReviewSum = computeTotalSummation(recipeToUpdate);
+									int totalNumberOfReviews = recipeToUpdate.getTotalNumberOfReviews();
+									String oldRatingColumnName = ""; // the column name to subtract one rating from.
+									String newRatingColumnName = ""; // the column name to add one rating to.
+									int oldUpdatedReviewQuantity = 0; // value to update the amount of the rating.
+									int newUpdatedReviewQuantity = 0; // value to update the amount of the rating.
+									totalReviewSum -= oldRating;
+									totalReviewSum += newRecipeRating;
 									
+									// must increment and decrement ratings.
 									if(oldRating == 1) {
-										updateReviewCountCode = recipesObject.updateRecipeOneStarRating(recipeToUpdate.getNumberOneStarReviews() - 1, recipeName);
+										oldUpdatedReviewQuantity = recipeToUpdate.getNumberOneStarReviews() - 1;
+										oldRatingColumnName = RECIPE_NUMBER_ONE_STAR_REVIEWS_COLUMN;
 									}
 									else if(oldRating == 2) {
-										updateReviewCountCode = recipesObject.updateRecipeTwoStarRating(recipeToUpdate.getNumberTwoStarReviews() - 1, recipeName);
+										oldUpdatedReviewQuantity = recipeToUpdate.getNumberTwoStarReviews() - 1;
+										oldRatingColumnName = RECIPE_NUMBER_TWO_STAR_REVIEWS_COLUMN;
 									}
 									else if(oldRating == 3) {
-										updateReviewCountCode = recipesObject.updateRecipeThreeStarRating(recipeToUpdate.getNumberThreeStarReviews() - 1, recipeName);
+										oldUpdatedReviewQuantity = recipeToUpdate.getNumberThreeStarReviews() - 1;
+										oldRatingColumnName = RECIPE_NUMBER_THREE_STAR_REVIEWS_COLUMN;
 									}
 									else if(oldRating == 4) {
-										updateReviewCountCode = recipesObject.updateRecipeFourStarRating(recipeToUpdate.getNumberFourStarReviews() - 1, recipeName);
+										oldUpdatedReviewQuantity = recipeToUpdate.getNumberFourStarReviews() - 1;
+										oldRatingColumnName = RECIPE_NUMBER_FOUR_STAR_REVIEWS_COLUMN;
 									}
 									else if(oldRating == 5) {
-										updateReviewCountCode = recipesObject.updateRecipeFiveStarRating(recipeToUpdate.getNumberFiveStarReviews() - 1, recipeName);
+										oldUpdatedReviewQuantity = recipeToUpdate.getNumberFiveStarReviews() - 1;
+										oldRatingColumnName = RECIPE_NUMBER_FIVE_STAR_REVIEWS_COLUMN;
 									}
 									
 									if(newRecipeRating == 1) {
-										updateReviewCountCode = recipesObject.updateRecipeOneStarRating(recipeToUpdate.getNumberOneStarReviews() + 1, recipeName);
+										newUpdatedReviewQuantity = recipeToUpdate.getNumberOneStarReviews() + 1;
+										newRatingColumnName = RECIPE_NUMBER_ONE_STAR_REVIEWS_COLUMN;
 									}
 									else if(newRecipeRating == 2) {
-										updateReviewCountCode = recipesObject.updateRecipeTwoStarRating(recipeToUpdate.getNumberTwoStarReviews() + 1, recipeName);
+										newUpdatedReviewQuantity = recipeToUpdate.getNumberTwoStarReviews() + 1;
+										newRatingColumnName = RECIPE_NUMBER_TWO_STAR_REVIEWS_COLUMN;
 									}
 									else if(newRecipeRating == 3) {
-										updateReviewCountCode = recipesObject.updateRecipeThreeStarRating(recipeToUpdate.getNumberThreeStarReviews() + 1, recipeName);
+										newUpdatedReviewQuantity = recipeToUpdate.getNumberThreeStarReviews() + 1;
+										newRatingColumnName = RECIPE_NUMBER_THREE_STAR_REVIEWS_COLUMN;
 									}
 									else if(newRecipeRating == 4) {
-										updateReviewCountCode = recipesObject.updateRecipeFourStarRating(recipeToUpdate.getNumberFourStarReviews() + 1, recipeName);
+										newUpdatedReviewQuantity = recipeToUpdate.getNumberFourStarReviews() + 1;
+										newRatingColumnName = RECIPE_NUMBER_FOUR_STAR_REVIEWS_COLUMN;
 									}
 									else if(newRecipeRating == 5) {
-										updateReviewCountCode = recipesObject.updateRecipeFiveStarRating(recipeToUpdate.getNumberFiveStarReviews() + 1, recipeName);
+										newUpdatedReviewQuantity = recipeToUpdate.getNumberFiveStarReviews() + 1;
+										newRatingColumnName = RECIPE_NUMBER_FIVE_STAR_REVIEWS_COLUMN;
 									}
-									if(updateReviewCountCode == 1) {
-										recipesObject = null;
-										usersDAO = null;
-										((ConfigurableApplicationContext)appContext).close();
-										redirectAttrs.addAttribute(RECIPE_NAME_PARAMETER, recipeName);
-										return REDIRECT_TO_RECIPE;
-									}
-									else {
-										errorMessage = "could not update the recipe review counter(s).";
-									}
+									
+									DecimalFormat ratingFormat = new DecimalFormat("#.#");
+									double newAverageRating = Double.valueOf(ratingFormat.format(((double)totalReviewSum / (double)totalNumberOfReviews)));
+									
+									updateReviewCode = recipesObject.updateReviewTransactionWithNewRating(newRecipeRating, reviewContent, currentTime, reviewIdValue, usersDAO, userName, oldRatingColumnName, oldUpdatedReviewQuantity,
+											recipeName, newRatingColumnName, newUpdatedReviewQuantity, newAverageRating);
 								}
 								else {
-									errorMessage = "review changed, but rating stayed the same.";
+									updateReviewCode = recipesObject.updateReviewTransactionNoNewRating(oldRating, reviewContent, currentTime, reviewIdValue, usersDAO, userName);
 								}
-							}		
+								if(updateReviewCode == 1) {
+									recipesObject = null;
+									usersDAO = null;
+									((ConfigurableApplicationContext)appContext).close();
+									redirectAttrs.addAttribute(RECIPE_NAME_PARAMETER, recipeName);
+									return REDIRECT_TO_RECIPE;
+								}
+								else {
+									errorMessage = "error updating the review.";
+								}
+							}
 							else {
-								errorMessage = "could not update review";
+								errorMessage = "you must wait 30 seconds before editing/adding/removing a review.";
 							}
 						}
 						else {
-							errorMessage = "you must wait 30 seconds before editing/adding/removing a review.";
+							errorMessage = "you are not the poster so you cannot edit the review.";
 						}
 					}
 					else {
-						errorMessage = "you are not the poster so you cannot edit the review.";
+						errorMessage = "invalid rating value.";
 					}
 				}
 				else {
@@ -1061,7 +965,8 @@ public class RecipeServiceImpl {
 		ApplicationContext appContext =  new ClassPathXmlApplicationContext(DATABASE_SOURCE_FILE);
 		RecipeDAOImpl recipesObject = (RecipeDAOImpl)appContext.getBean(RECIPE_DAO_BEAN_NAME);
 		
-		List<Recipe> recipesList = recipesObject.getAllRecipes();
+		//List<Recipe> recipesList = recipesObject.getAllRecipes();
+		List<Recipe> recipesList = recipesObject.getRecipesByHighestRating();
 		
 		if(recipesList != null) {
 			computeRecipeAverageRatingandTotalReviews(recipesList);
@@ -1132,7 +1037,7 @@ public class RecipeServiceImpl {
 			}
 			
 			model.addAttribute("recipeObject", recipe);
-			computeRecipeAverageRatingandTotalReviews(recipe);
+			//computeTotalNumberOfReviews(recipe);
 			int totalReviews = recipe.getTotalNumberOfReviews();
 			double averageRating = recipe.getAverageRating();
 		
@@ -1209,13 +1114,7 @@ public class RecipeServiceImpl {
 			String formattedCookTime = convertTimeForModification(recipeToEdit.getCookTime());
 			String formattedPrepTime = convertTimeForModification(recipeToEdit.getPrepTime());
 			
-			String cookTimeHour = "0";
-			String cookTimeMinute = "0";
-			String cookTimeSecond = "0";
-			
-			String prepTimeHour = "0";
-			String prepTimeMinute = "0";
-			String prepTimeSecond = "0";
+			String cookTimeHour = "0", cookTimeMinute = "0", cookTimeSecond = "0", prepTimeHour = "0", prepTimeMinute = "0", prepTimeSecond = "0";
 			
 			String[] cookTimeDelimited = formattedCookTime.split("/");
 			if(cookTimeDelimited.length == 3) {
@@ -1285,15 +1184,9 @@ public class RecipeServiceImpl {
 						int cookTimeConverted = utilityService.convertEnteredTime(cookTimeParsed[0], cookTimeParsed[1], cookTimeParsed[2]);
 						if(prepTimeConverted >= 0) {
 							if(cookTimeConverted >= 0) {
-								int recipeUpdateCode = recipesDAO.updateRecipeContents(prepTimeConverted, cookTimeConverted, dishType, imageURL, recipeDescription, recipeName);
+								int recipeUpdateCode = recipesDAO.editRecipeTransaction(prepTimeConverted, cookTimeConverted, dishType, imageURL, recipeDescription, recipeName, userDAO, current_time, principal.getName());
 								if(recipeUpdateCode == 1) {
-									int updateLastPostedRecipeTimeCode = userDAO.updateUserLastPostedRecipeTime(current_time, principal.getName());
-									if(updateLastPostedRecipeTimeCode == 1) {
-										errorMessage = "successfully edited recipe!";
-									}
-									else {
-										errorMessage = "updated the recipe, but could not update your last posted time.";
-									}
+									errorMessage = "successfully edited recipe!";
 								}
 								else {
 									errorMessage = "Could not update the recipe.";
@@ -1306,8 +1199,7 @@ public class RecipeServiceImpl {
 						else {
 							errorMessage = "The prep time could not be properly formatted.";
 						}
-						recipesDAO = null;
-						userDAO = null;
+						recipesDAO = null; userDAO = null;
 						((ConfigurableApplicationContext)appContext).close();
 					}
 					else {
@@ -1419,15 +1311,10 @@ public class RecipeServiceImpl {
 	 */
 	private void computeRecipeAverageRatingandTotalReviews(Recipe recipe) {
 		if(recipe != null) {
-			Integer numberOfOneStarReviews = null;
-			Integer numberOfTwoStarReviews = null;
-			Integer numberOfThreeStarReviews = null;
-			Integer numberOfFourStarReviews = null;
-			Integer numberOfFiveStarReviews = null;
+			Integer numberOfOneStarReviews = null, numberOfTwoStarReviews = null, numberOfThreeStarReviews = null, numberOfFourStarReviews = null, numberOfFiveStarReviews = null;
 
-			int totalNumberOfRatings = 0;
+			int totalNumberOfRatings = 0, summation = 0;
 			double averageRating = 0.0;
-			int summation = 0;
 			
 			numberOfOneStarReviews = recipe.getNumberOneStarReviews();
 			if(numberOfOneStarReviews != null) {
@@ -1467,7 +1354,33 @@ public class RecipeServiceImpl {
 			}
 		}
 	}
+	
+	/**
+	 * @param recipe The recipe to use to get the total value.
+	 * @return The total value used to help compute the average recipe rating.
+	 * cannot just get the average rating because it does not factor in all of the pre existing reviews when
+	 * re-computing the new average.
+	 */
+	private int computeTotalSummation(Recipe recipe) {
+		int summation = 0;
+		if(recipe != null) {
+			Integer numberOfOneStarReviews = null, numberOfTwoStarReviews = null, numberOfThreeStarReviews = null, numberOfFourStarReviews = null, numberOfFiveStarReviews = null;
 
+			numberOfOneStarReviews = recipe.getNumberOneStarReviews();
+			numberOfTwoStarReviews = recipe.getNumberTwoStarReviews();
+			numberOfThreeStarReviews = recipe.getNumberThreeStarReviews();
+			numberOfFourStarReviews = recipe.getNumberFourStarReviews();
+			numberOfFiveStarReviews = recipe.getNumberFiveStarReviews();
+			
+			summation = numberOfOneStarReviews != null ? summation + numberOfOneStarReviews : summation + 0;
+			summation = numberOfTwoStarReviews != null ? summation + (numberOfTwoStarReviews * 2) : summation + 0;
+			summation = numberOfThreeStarReviews != null ? summation + (numberOfThreeStarReviews * 3) : summation + 0;
+			summation = numberOfFourStarReviews != null ? summation + (numberOfFourStarReviews * 4) : summation + 0;
+			summation = numberOfFiveStarReviews != null ? summation + (numberOfFiveStarReviews * 5) : summation + 0;
+		}
+		return summation;
+	}
+	
 	/**
 	 * @param principal An object holding authentication information of the current user.
 	 * @param recipeName The name of the recipe to delete.
@@ -1482,7 +1395,7 @@ public class RecipeServiceImpl {
 		// check if the user owns the recipe
 		// if the return code is 1, then the recipe was deleted, and redirect back to the show all recipes page!@!
 		// if anything else happens redirect to the recipe and print a message saying it wasn't deleted.
-		// recipedaoimpl deleteRecipe to delete the recipe!
+		// RecipeDAOImpl deleteRecipe to delete the recipe!
 		UtilityServiceImpl utilityService = new UtilityServiceImpl();
 		String returnMessage = "you are not the owner of this recipe so you cannot remove it.";
 		if(utilityService.isOwner(principal, RECIPE_TYPE, recipeName)) {

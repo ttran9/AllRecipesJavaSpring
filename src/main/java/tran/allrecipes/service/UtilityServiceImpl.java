@@ -479,7 +479,7 @@ public class UtilityServiceImpl {
 	 * @return An admin only page indicating the status of the user's enabled permission.
 	 */
 	public String setUserDisabled(Principal principal, String userName) {
-		// TODO Auto-generated method stub
+		// will be implemented after database transactions are implemented and tested.
 		if(principal != null) {
 			
 		}

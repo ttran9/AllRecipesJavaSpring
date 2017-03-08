@@ -139,43 +139,24 @@ public class RegisterServiceImpl {
 				UserServiceImpl userService = new UserServiceImpl(userName, password, verifyPassword);
 				ApplicationContext appContext =  new ClassPathXmlApplicationContext(DATABASE_SOURCE_FILE);
 				UsersDAOImpl usersDAO = (UsersDAOImpl) appContext.getBean(USER_DAO_BEAN_NAME);
-				
 				if(usersDAO.getUserName(userName) == null) {
 					if(userService.validate()) {
 						String encryptedPassword = userService.encryptPassword(password);
-						int createUserCode = usersDAO.createUser(userName, encryptedPassword, true);
+						ShoppingListDAOImpl shoppingListDAO = (ShoppingListDAOImpl) appContext.getBean(SHOPPING_LIST_DAO_BEAN_NAME);
+						PantryListDAOImpl pantryListDAO = (PantryListDAOImpl) appContext.getBean(PANTRY_LIST_DAO_BEAN_NAME);
+						String shoppingListName = userName + "'s " + "Shopping List";
+						String pantryListName = userName + "'s " + "Pantry List";
+						int createUserCode = usersDAO.createUserTransaction(userName, encryptedPassword, shoppingListDAO, shoppingListName, pantryListDAO, pantryListName);
 						if(createUserCode == 1) {
-							ShoppingListDAOImpl shoppingListDAO = (ShoppingListDAOImpl) appContext.getBean(SHOPPING_LIST_DAO_BEAN_NAME);
-							PantryListDAOImpl pantryListDAO = (PantryListDAOImpl) appContext.getBean(PANTRY_LIST_DAO_BEAN_NAME);
-							String shoppingListName = userName + "'s " + "shopping list";
-							int createShoppingList = shoppingListDAO.addList(shoppingListName, userName);
-							String pantryListName = userName + "'s " + "pantry list";
-							int createPantryList = pantryListDAO.addList(pantryListName, userName);
-							int createUserRole = usersDAO.insertUserRole("ROLE_USER", userName);
-							// at this point a different object will be used to print the notification to the user.
-							StringBuilder notificationMessage = new StringBuilder();
-							String lineSeparator = System.lineSeparator();
-							notificationMessage.append("user successfully created!" + lineSeparator + "if there are any other messages below contact an admin." + lineSeparator);
-							
-							if(createShoppingList != 1) {
-								notificationMessage.append("no shopping list was created.");
-							}
-							if(createUserRole != 1) {
-								notificationMessage.append("no role could be created.");
-							}
-							if(createPantryList != 1) {
-								notificationMessage.append("no pantry list was created.");
-							}
-							
 							sendVerificationEmail(usersDAO, shoppingListDAO, pantryListDAO, userName);
-							shoppingListDAO = null;
-							usersDAO = null;
-							userService = null;
+							errorMessage = "user successfully created! log in below.";
+							shoppingListDAO = null; pantryListDAO = null; usersDAO = null; userService = null;
 							((ConfigurableApplicationContext)appContext).close();
-							redirectAttrs.addAttribute(MESSAGE_PARAMETER, notificationMessage.toString());
+							redirectAttrs.addAttribute(MESSAGE_PARAMETER, errorMessage);
 							return REDIRECT_TO_LOGIN;
 						}
 						else {
+							shoppingListDAO = null; pantryListDAO = null;
 							errorMessage = "user could not be created.";
 						}
 					}
@@ -186,8 +167,7 @@ public class RegisterServiceImpl {
 				else {
 					errorMessage = "user name already exists.";
 				}
-				usersDAO = null;
-				userService = null;
+				usersDAO = null; userService = null;
 				((ConfigurableApplicationContext)appContext).close();
 			}
 			redirectAttrs.addAttribute(ERROR_PARAMETER, errorMessage);

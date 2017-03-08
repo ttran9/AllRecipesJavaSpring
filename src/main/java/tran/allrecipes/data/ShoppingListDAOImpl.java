@@ -1,12 +1,18 @@
 package tran.allrecipes.data;
 
+import java.util.HashMap;
 import java.util.List;
 
 import javax.sql.DataSource;
 
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import tran.allrecipes.presentation.model.Ingredient;
 
@@ -56,6 +62,8 @@ public class ShoppingListDAOImpl implements GenericUserListDAO, PantryListShoppi
 	private DataSource dataSource;
 	/** A data member to perform SQL related queries such as insertions, removals, and updates. */
 	private JdbcTemplate jdbcTemplateObject;
+	/** Enforces a transaction (all or nothing) when modifying the database. */
+	private PlatformTransactionManager transactionManager;
 	
 	/**
 	 * @param dataSource An object holding information to connect to a database.
@@ -63,6 +71,13 @@ public class ShoppingListDAOImpl implements GenericUserListDAO, PantryListShoppi
 	public void setDataSource(DataSource dataSource) {
 		this.dataSource = dataSource;
 		this.jdbcTemplateObject = new JdbcTemplate(this.dataSource);
+	}
+	
+	/**
+	 * @param transactionManager An object managing the all or nothing transaction.
+	 */
+	public void setTransactionManager(PlatformTransactionManager transactionManager) {
+		this.transactionManager = transactionManager;
 	}
 		
 	/**
@@ -111,7 +126,7 @@ public class ShoppingListDAOImpl implements GenericUserListDAO, PantryListShoppi
 		}
 		catch(DataAccessException e) {
 			System.out.println(e.getMessage());
-			System.out.println("could not add shopping list: " + shoppingListName);
+			throw new DataIntegrityViolationException("could not add shopping list: " + shoppingListName);
 		}
 		return returnCode;
 	}
@@ -202,7 +217,7 @@ public class ShoppingListDAOImpl implements GenericUserListDAO, PantryListShoppi
 	 * @return 1 if the shopping list ingredient was added, -1 if not.
 	 */
 	public int addListIngredient(String ingredientName, int ingredientWholeNumber, int ingredientNumerator, int ingredientDenominator,
-	String ingredientUnit, String ingredientType, String shoppingListName) {
+		String ingredientUnit, String ingredientType, String shoppingListName) {
 		// TODO Auto-generated method stub
 		int returnCode = -1;
 		try {
@@ -210,7 +225,7 @@ public class ShoppingListDAOImpl implements GenericUserListDAO, PantryListShoppi
 		}
 		catch(DataAccessException e) {
 			System.out.println(e.getMessage());
-			System.out.println("could not add ingredient: " + ingredientName + " to shopping list: " + shoppingListName);
+			throw new DataIntegrityViolationException("could not add ingredient: " + ingredientName + " to shopping list: " + shoppingListName);
 		}
 		return returnCode;
 	}
@@ -286,9 +301,40 @@ public class ShoppingListDAOImpl implements GenericUserListDAO, PantryListShoppi
 		}
 		catch(DataAccessException e) {
 			System.out.println(e.getMessage());
-			System.out.println("could not update ingredient amount with ID: " + ingredientId);
+			throw new DataIntegrityViolationException("could not update ingredient amount with ID: " + ingredientId);
 		}
 		return returnCode;
 	}
+	
+	/**
+	 * @param insertMap A map holding all the ingredients to be inserted/added into the shopping list.
+	 * @param shoppingListName The name of the shopping list to add the ingredients into.
+	 * @param updatedIngredientsList The list with the updated ingredient(s) quantity from the pantry or recipe list added with the current existing ingredient on the shopping list.
+	 * @return An empty string if all the contents are successfully added to the shopping list, any informative string implies some sort of error.
+	 */
+	public String transferContentsTransaction(HashMap<String, Ingredient> insertMap, String shoppingListName, List<Ingredient> updatedIngredientsList) {
+		TransactionDefinition def = new DefaultTransactionDefinition();
+	    TransactionStatus status = transactionManager.getTransaction(def);
+	    String transferContentsMessage = "";
+		try {
+			for(Ingredient ingredient : insertMap.values()) {
+				// add all the ingredients to the shopping list.
+				addListIngredient(ingredient.getIngredientName(), Integer.parseInt(ingredient.getWholeNumber()), Integer.parseInt(ingredient.getNumerator()), Integer.parseInt(ingredient.getDenominator()), 
+					ingredient.getIngredientUnit(), ingredient.getIngredientType(), shoppingListName);
+			}
+			// go through the update list and add to the shopping list using update statements.
+			for(Ingredient ingredient : updatedIngredientsList) {
+				updateListIngredientAmount(Integer.parseInt(ingredient.getWholeNumber()), Integer.parseInt(ingredient.getNumerator()), Integer.parseInt(ingredient.getDenominator()), ingredient.getIngredientID());
+			}
+			transactionManager.commit(status);
+		}
+		catch(DataIntegrityViolationException e) {
+			System.out.println(e.getMessage());
+			transactionManager.rollback(status);
+			transferContentsMessage = "could not transfer the ingredients on to your shopping list.";
+		}
+		return transferContentsMessage;
+	}
+	
 	
 }

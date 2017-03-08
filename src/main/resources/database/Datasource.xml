@@ -16,24 +16,31 @@ http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
 		<property name="password" value="${jdbc.password}" />
 	</bean>
 	
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    	<property name="dataSource" ref="dataSource" />    
+ 	</bean>
+	
 	<bean id="RecipesDAO" class="tran.allrecipes.data.RecipeDAOImpl">
-	    <property name="dataSource"  ref="dataSource" />    
+	    <property name="dataSource" ref="dataSource" />  
+	    <property name="transactionManager" ref="transactionManager" />   
 	</bean>
 	
 	<bean id="UsersDAO" class="tran.allrecipes.data.UsersDAOImpl">
-	    <property name="dataSource"  ref="dataSource" />    
+	    <property name="dataSource" ref="dataSource" />    
+	    <property name="transactionManager" ref="transactionManager" />   
 	</bean>
 	
 	<bean id="ShoppingListDAO" class="tran.allrecipes.data.ShoppingListDAOImpl">
-	    <property name="dataSource"  ref="dataSource" />    
+	    <property name="dataSource" ref="dataSource" />    
+	    <property name="transactionManager" ref="transactionManager" />   
 	</bean>
 	
 	<bean id="PantryListDAO" class="tran.allrecipes.data.PantryListDAOImpl">
-	    <property name="dataSource"  ref="dataSource" />    
+	    <property name="dataSource" ref="dataSource" />    
 	</bean>
 	
 	<bean id="PersistentTokensDAO" class="tran.allrecipes.data.PersistentTokensDAOImpl">
-	    <property name="dataSource"  ref="dataSource" />    
+	    <property name="dataSource" ref="dataSource" />    
 	</bean>
 	
 </beans>

@@ -6,8 +6,13 @@ import java.util.List;
 import javax.sql.DataSource;
 
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import tran.allrecipes.presentation.model.User;
 import tran.allrecipes.presentation.model.UserRole;
@@ -51,12 +56,24 @@ public class UsersDAOImpl implements UsersDAO {
 	private DataSource dataSource;
 	/** A data member to perform SQL related queries such as insertions, removals, and updates. */
 	private JdbcTemplate jdbcTemplateObject;
-
+	/** Enforces a transaction (all or nothing) when modifying the database. */
+	private PlatformTransactionManager transactionManager;
+	
+	/**
+	 * @param dataSource An object holding information to make a database connection.
+	 */
 	public void setDataSource(DataSource dataSource) {
 		this.dataSource = dataSource;
 		this.jdbcTemplateObject = new JdbcTemplate(this.dataSource);
 	}
-
+	
+	/**
+	 * @param transactionManager An object managing the all or nothing transaction.
+	 */
+	public void setTransactionManager(PlatformTransactionManager transactionManager) {
+		this.transactionManager = transactionManager;
+	}
+	
 	/**
 	 * This method is unused for earlier versions, this will be useful when creating a user profile page.
 	 * @param userName The name of the user to retrieve
@@ -193,7 +210,7 @@ public class UsersDAOImpl implements UsersDAO {
 		}
 		catch(DataAccessException e) {
 			System.out.println(e.getMessage());
-			System.out.println("Could not create user: " + userName);
+			throw new DataIntegrityViolationException("Could not create user: " + userName);
 		}
 		return returnCode;
 	}
@@ -265,7 +282,7 @@ public class UsersDAOImpl implements UsersDAO {
 		}
 		catch(DataAccessException e) {
 			System.out.println(e.getMessage());
-			System.out.println("Could not update user: " + userName + "'s last posted recipe time.");
+			throw new DataIntegrityViolationException("Could not update user: " + userName + "'s last posted recipe time.");
 		}
 		return returnCode;
 	}
@@ -283,7 +300,7 @@ public class UsersDAOImpl implements UsersDAO {
 		}
 		catch(DataAccessException e) {
 			System.out.println(e.getMessage());
-			System.out.println("Could not update user: " + userName + "'s last posted review time.");
+			throw new DataIntegrityViolationException("Could not update user: " + userName + "'s last posted review time.");
 		}
 		return returnCode;
 	}
@@ -319,7 +336,7 @@ public class UsersDAOImpl implements UsersDAO {
 		}
 		catch(DataAccessException e) {
 			System.out.println(e.getMessage());
-			System.out.println("Could not insert role: " + roleName + ", for user: " + userName);
+			throw new DataIntegrityViolationException("Could not insert role: " + roleName + ", for user: " + userName);
 		}
 		return returnCode;
 	}
@@ -361,4 +378,34 @@ public class UsersDAOImpl implements UsersDAO {
 		}
 		return updateReturnCode;
 	}
+	
+	/**
+	 * @param userName
+	 * @param encryptedPassword
+	 * @param shoppingListDAO
+	 * @param shoppingListName
+	 * @param pantryListDAO
+	 * @param pantryListName
+	 * @return
+	 */
+	public int createUserTransaction(String userName, String encryptedPassword, ShoppingListDAOImpl shoppingListDAO, String shoppingListName, PantryListDAOImpl pantryListDAO, String pantryListName) {
+		int createUserCode = -1;
+		TransactionDefinition def = new DefaultTransactionDefinition();
+		TransactionStatus status = transactionManager.getTransaction(def);
+		try {
+			createUser(userName, encryptedPassword, true);
+			shoppingListDAO.addList(shoppingListName, userName);
+			pantryListDAO.addList(pantryListName, userName);
+			insertUserRole("ROLE_USER", userName);
+			transactionManager.commit(status);
+			createUserCode = 1;
+		}
+		catch(DataIntegrityViolationException e) {
+			System.out.println(e.getMessage());
+	    	transactionManager.rollback(status);
+	    	createUserCode = -1;
+		}
+		return createUserCode;
+	}
+	
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import javax.sql.DataSource;
 
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -119,7 +120,7 @@ public class PantryListDAOImpl implements GenericUserListDAO, PantryListShopping
 		}
 		catch(DataAccessException e) {
 			System.out.println(e.getMessage());
-			System.out.println("could not add pantry list for user: " + userOwnerOfInventoryList);
+			throw new DataIntegrityViolationException("could not add pantry list for user: " + userOwnerOfInventoryList);
 		}
 		return returnCode;
 		

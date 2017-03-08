@@ -33,6 +33,9 @@ public class RecipeMapper implements RowMapper<Recipe> {
 	private String FourStarReviewColumn = "numberFourStarReviews";
 	private String FiveStarReviewColumn = "numberFiveStarReviews";
 	
+	private String averageRatingColumn = "averageRating";
+	private String totalNumberOfReviewsColumn = "totalNumberOfReviews";
+	
 	// allows the recipe name to be passed into JavaScript function(s).
 	private String encoded_double_quote = "&quot;";
 	private String encoded_single_quote = "&#8216;";
@@ -60,6 +63,8 @@ public class RecipeMapper implements RowMapper<Recipe> {
 		Integer fiveStarReviews = null;
 		Timestamp recipeOriginalDateCreated = null;
 		String recipeDescription = null;
+		Double averageRating = null;
+		Integer totalNumberOfReviews = null;
 		try {
 			recipeId = rs.getInt(recipeIdColumn);
 			recipeName = rs.getString(recipeNameColumn);
@@ -76,6 +81,8 @@ public class RecipeMapper implements RowMapper<Recipe> {
 			fiveStarReviews = rs.getInt(FiveStarReviewColumn);
 			recipeOriginalDateCreated = rs.getTimestamp(dateCreatedColumn);
 			recipeDescription = rs.getString(recipeDescriptionColumn);
+			averageRating = rs.getDouble(averageRatingColumn);
+			totalNumberOfReviews = rs.getInt(totalNumberOfReviewsColumn);
 			
 			if(recipeId != null) recipe.setRecipeId(recipeId);
 			if(recipeName != null) {
@@ -107,6 +114,9 @@ public class RecipeMapper implements RowMapper<Recipe> {
 				receiptDescriptionDelimited = receiptDescriptionDelimited.replaceAll("\"", encoded_double_quote);
 				recipe.setRecipeDescriptionDelimited(receiptDescriptionDelimited);
 			}
+			// will always be non null, if null it is zero.
+			recipe.setAverageRating(averageRating);
+			recipe.setTotalNumberOfReviews(totalNumberOfReviews);
 		}
 		catch(SQLException e) {
 			System.out.println("not able to retrieve recipe");

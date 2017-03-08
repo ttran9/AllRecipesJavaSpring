@@ -104,27 +104,19 @@ public class CreateRecipeServiceImpl {
 						if(prepTimeConverted >= 0) {
 							if(cookTimeConverted >= 0) {
 								String userName = principal.getName();
-								int recipeCreateCode = recipesDAO.insertRecipe(recipeName, numberServingsConverted, userName, prepTimeConverted, cookTimeConverted, dishType, imageURL, current_time, recipeDescription, 0, 0, 0, 0, 0);
+								int defaultQuantity = 0;
+								double defaultAverageRating = 0.0; // by default there are 0 reviews, so the average rating is 0.
+								int recipeCreateCode = recipesDAO.addRecipeTransaction(recipeName, numberServingsConverted, userName, prepTimeConverted, cookTimeConverted, dishType, imageURL, current_time, 
+										recipeDescription, defaultQuantity, defaultAverageRating, userDAO);
 								if(recipeCreateCode == 1) {
-									// use userDAO to update the last posted time for create recipe.
-									int updateLastPostedRecipeTimeCode = userDAO.updateUserLastPostedRecipeTime(current_time, userName);
-									/**
-									 * this check is done to prevent the user from creating too many recipes at once.
-									 */
-									if(updateLastPostedRecipeTimeCode != 1) {
-										errorMessage = "successfully created recipe! but could not update when you last created the recipe!";
-									}
-									else {
-										errorMessage = "successfully created recipe!";
-									}
-									recipesDAO = null;
-									userDAO = null;
+									errorMessage = "successfully created recipe!";
+									recipesDAO = null; userDAO = null;
 									((ConfigurableApplicationContext)appContext).close();
 									redirectAttrs.addAttribute(MESSAGE_PARAM, errorMessage);
 									return REDIRECT_TO_SHOW_ALL_RECIPES;
 								}
 								else {
-									errorMessage = "failed to create recipe. if all fields were properly filled in contact an administrator.";
+									errorMessage = "failed to create the recipe.";
 								}
 							}
 							else {
@@ -134,8 +126,7 @@ public class CreateRecipeServiceImpl {
 						else {
 							errorMessage = "The prep time could not be properly formatted.";
 						}
-						recipesDAO = null;
-						userDAO = null;
+						recipesDAO = null; userDAO = null;
 						((ConfigurableApplicationContext)appContext).close();
 					}
 					else {
