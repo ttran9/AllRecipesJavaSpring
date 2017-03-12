@@ -20,6 +20,8 @@ public class UserServiceImpl {
     private String password;
     /** A password validation field. */
     private String validatePassword;
+    /** Message to indicate that the password does not meet requirements. */
+    private String incorrectPasswordMessage = "The password must be between 6 to 20 characters, white spaces are not allowed!";
 
     public UserServiceImpl() {}
     
@@ -74,7 +76,7 @@ public class UserServiceImpl {
     /** Validates the registration for a user. */
     public boolean validate() {
         String userNameRegex = "^[a-z0-9_-]{6,35}$";
-        String passwordRegex = "((?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%])(?!.*\\s).{6,20})";
+        String passwordRegex = "(((?=.*\\d)?)(?=.*[a-z])((?=.*[A-Z])?)((?=.*[@#$%])?)(?!.*[\\s]).{6,20})";
 
         if(!userName.matches(userNameRegex)) {
             message = "The user name must be at least 6 characters long and up to 35 characters.\nOnly lower case letters, numbers, an underscore , or hyphen are allowed!";
@@ -82,7 +84,7 @@ public class UserServiceImpl {
         }
 
         if(!password.matches(passwordRegex)) {
-            message = "The password must have at least one number, one lower and upper case letter, and one of the special symbols: '@', '#', '$', '%'.\nThe length must be between 6 to 20 characters.";
+            message = incorrectPasswordMessage;
             return false;
         }
         if(!password.equals(validatePassword)) {
@@ -95,10 +97,10 @@ public class UserServiceImpl {
 
     /** validates for user password change. */
     public boolean validatePasswords() {
-        String passwordRegex = "((?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%])(?!.*\\s).{6,20})";
+        String passwordRegex = "(((?=.*\\d)?)(?=.*[a-z])((?=.*[A-Z])?)((?=.*[@#$%])?)(?!.*[\\s]).{6,20})";
 
         if(!password.matches(passwordRegex)) {
-            message = "The password must have at least one number, one lower and upper case letter, and one of the special symbols: '@', '#', '$', '%'.\nThe length must be between 6 to 20 characters.";
+            message = incorrectPasswordMessage;
             return false;
         }
         if(!password.equals(validatePassword)) {
@@ -127,7 +129,7 @@ public class UserServiceImpl {
      */
     public boolean validateLogin() {
         String userNameRegex = "^[a-z0-9_-]{6,35}$";
-        String passwordRegex = "((?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%])(?!.*\\s).{6,20})";
+        String passwordRegex = "(((?=.*\\d)?)(?=.*[a-z])((?=.*[A-Z])?)((?=.*[@#$%])?)(?!.*[\\s]).{6,20})";
 
         if(!userName.matches(userNameRegex)) {
             message = "The user name must be at least 6 characters long and up to 35 characters.\nOnly lower case letters, numbers, an underscore , or hyphen are allowed!";
@@ -135,7 +137,7 @@ public class UserServiceImpl {
         }
 
         if(!password.matches(passwordRegex)) {
-            message = "The password must have at least one number, one lower and upper case letter, and one of the special symbols: '@', '#', '$', '%'.\nThe length must be between 6 to 20 characters.";
+            message = incorrectPasswordMessage;
             return false;
         }
 

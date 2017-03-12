@@ -50,7 +50,7 @@ public class RegisterServiceImpl {
 	/** The title of the page attribute. */
 	private static final String PAGE_TITLE_ATTRIBUTE = "title";
     /** Page title. */
-	private static final String PAGE_TITLE = "Login Page!";
+	private static final String PAGE_TITLE = "Registration Page!";
 	/** The attribute to have a second hyper link on the navigation bar. */
 	private static final String SECOND_NAVBAR_LINK = "secondNavbarLink";
 	/** The attribute to display text of the second hyper link on the navigation bar. */

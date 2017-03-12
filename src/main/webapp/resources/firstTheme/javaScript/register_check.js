@@ -21,7 +21,7 @@ function checkUserNameRegistration() {
 }
 
 function verifyPassword() {
-	var passwordRegex= new RegExp("((?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%])(?!.*\\s).{6,20})");
+	var passwordRegex= new RegExp("(((?=.*\\d)?)(?=.*[a-z])((?=.*[A-Z])?)((?=.*[@#$%])?)(?!.*[\\s]).{6,20})");
 	
 	var registrationForm  = document.getElementById("registrationForm");
 	var passwordField = registrationForm.elements["registerPassword"].value;
@@ -33,13 +33,13 @@ function verifyPassword() {
 	} 
 	else {
 		document.getElementById("registrationErrorField").className = "registrationError";
-		document.getElementById("registrationErrorField").innerHTML = "The password must have at least one number, one lower and upper case letter, and one of the special symbols: '@', '#', '$', '%'.\nThe length must be between 6 to 20 characters!";
+		document.getElementById("registrationErrorField").innerHTML = "The password must have at least 6 letters and cannot have space(s) in it.";
 		return false;
 	}
 }
 
 function verifyCheckPassword() {
-	var passwordRegex= new RegExp("((?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%])(?!.*\\s).{6,20})");
+	var passwordRegex= new RegExp("(((?=.*\\d)?)(?=.*[a-z])((?=.*[A-Z])?)((?=.*[@#$%])?)(?!.*[\\s]).{6,20})");
 	var registrationForm  = document.getElementById("registrationForm");
 	var passwordField = registrationForm.elements["registerPassword"].value;
 	var verifyPasswordField = registrationForm.elements["registerValidatePassword"].value;
@@ -51,7 +51,7 @@ function verifyCheckPassword() {
 	}
 	else if(!(passwordRegex.test(verifyPasswordField))) {
 		document.getElementById("registrationErrorField").className = "registrationError";
-		document.getElementById("registrationErrorField").innerHTML = "The password must have at least one number, one lower and upper case letter, and one of the special symbols: '@', '#', '$', '%'.\nThe length must be between 6 to 20 characters!";
+		document.getElementById("registrationErrorField").innerHTML = "The password must have at least 6 letters and cannot have space(s) in it.";
 		return false;
 	}
 	else {
