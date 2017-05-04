@@ -1,7 +1,6 @@
 package tran.allrecipes.service;
 
 import java.security.Principal;
-import java.util.List;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -12,9 +11,11 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.codec.Base64;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
-import org.springframework.security.web.authentication.rememberme.PersistentRememberMeToken;
+import org.springframework.security.web.authentication.rememberme.InvalidCookieException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import tran.allrecipes.data.PersistentTokensDAOImpl;
@@ -35,6 +36,12 @@ public class LogoutServiceImpl {
 	private static final String PERSISTENT_TOKENS_BEAN_NAME = "PersistentTokensDAO";
 	/** The location of the data source file. */
 	private static final String DATABASE_SOURCE_FILE = "database/Datasource.xml";	
+	/** A separating character in the remember me cookie. */
+	private static final String DELIMITER = ":";
+	/** Cookie not base64 encoded error message. */
+	private static final String COOKIE_ENCODING_ERROR = "the cookie from this logged in user was not Base64 encoded.";
+	/** Debugging error message for a log out that may have failed or had a side effect. */
+	private static final String LOG_OUT_DEBUG_MESSAGE = "a remember-me log out error.";
 	
 	public LogoutServiceImpl() {
 		// TODO Auto-generated constructor stub
@@ -58,26 +65,18 @@ public class LogoutServiceImpl {
 					informationMessage = "unable to log you out";
 				}
 				else {
-					Cookie[] sentCookies = request.getCookies();
-					String userName = principal.getName();
-					if(sentCookies != null) { 
-						for(Cookie cookie: sentCookies)  {
-							if(cookie.getName().equals(REMEMBER_ME_TOKEN_NAME)) {
-								// remove the cookie from the browser if it exists.
-								utilityService.removeARCookieFromBrowser(request, response);
-							}
-						}
-					}
+					String unparsedPersistentTokens = getRememberMeCookieValue(request);
+					String seriesIdentifier = decodeCookie(unparsedPersistentTokens);
 					ApplicationContext appContext =  new ClassPathXmlApplicationContext(DATABASE_SOURCE_FILE);
 					PersistentTokensDAOImpl persistentTokensDAO = (PersistentTokensDAOImpl)appContext.getBean(PERSISTENT_TOKENS_BEAN_NAME);
-					List<PersistentRememberMeToken> tokenList = persistentTokensDAO.getPersistentTokens(userName);
 					
-					for(PersistentRememberMeToken token : tokenList) {
-						if(token != null) {
-							utilityService.getRepositoryTokenWithDataSource().removeUserTokens(userName);
-						}
+					if(persistentTokensDAO.deleteUniqueUser(seriesIdentifier) == 1) {
+						informationMessage = "logged out!";
 					}
-					informationMessage = "logged out!";
+					else {
+						System.out.println(LOG_OUT_DEBUG_MESSAGE);
+						informationMessage = LOG_OUT_DEBUG_MESSAGE;
+					}
 					persistentTokensDAO = null;
 					((ConfigurableApplicationContext) appContext).close();
 				}
@@ -86,4 +85,51 @@ public class LogoutServiceImpl {
 		redirectAttrs.addAttribute(REDIRECT_MESSAGE_PARAM, informationMessage);
 		return REDIRECT_TO_MAIN_PAGE;
 	}
+	
+	/**
+	 * @param request An object holding user request information. 
+	 * purpose of this method is to get a string which will be used to decode the unique series identifier to delete
+	 * the remember token for this user name on a SPECIFIC device.
+	 * @return The cookie value for this current user on a specific device.
+	 */
+	private String getRememberMeCookieValue(HttpServletRequest request) {
+		Cookie[] sentCookies = request.getCookies();
+		for(Cookie cookie: sentCookies)  {
+			if(cookie.getName().equals(REMEMBER_ME_TOKEN_NAME)) {
+				// remove the cookie from the browser if it exists.
+				return cookie.getValue();
+			}
+		}
+		return "";
+	}
+	
+	/**
+	 * code taken and modified from: org.springframework.security.web.authentication.rememberme.AbstractRememberMeServices 
+	 * modified to get the series ID unique identifier.
+	 * Decodes the cookie and splits it into a set of token strings using the ":" delimiter.
+	 * @param cookieValue the value obtained from the submitted cookie
+	 * @return The unique series identifier for a given user on a specific device.
+	 */
+	private String decodeCookie(String cookieValue) {
+		try {
+			if (!Base64.isBase64(cookieValue.getBytes())) {
+				throw new InvalidCookieException(COOKIE_ENCODING_ERROR);
+			}
+		}
+		catch(InvalidCookieException e) {
+			System.out.println(e.getMessage());
+			return ""; // invalid series identifier for when the string is not Base64 encoded. */
+		}
+		
+		for (int j = 0; j < cookieValue.length() % 4; j++) {
+			cookieValue = cookieValue + "=";
+		}
+
+		String plainTextCookie = new String(Base64.decode(cookieValue.getBytes()));
+
+		String[] tokens = StringUtils.delimitedListToStringArray(plainTextCookie, DELIMITER);
+
+		return tokens[0]; // first token is the series identifier, second is the "token"
+	}
+	
 }
