@@ -2,7 +2,7 @@
 The below sections will be updated!
 
 ## Background
-- Originally I decided to implement this project as I just wanted to practice more with Spring 4 and Thymeleaf.
+- Originally, I decided to implement this project as I just wanted to practice more with Spring 4 and Thymeleaf.
 - As of November 2017, I will begin updating this and creating a new repository for it.
   - For cleaner code such as in the pom file I will be using Spring5 and Spring Boot to reduce the amount of dependencies needed.
 
