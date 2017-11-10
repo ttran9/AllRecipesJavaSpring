@@ -1,6 +1,11 @@
 ## Todd's Implementation of a miniature AllRecipes website using Java Spring and Thymeleaf.
 The below sections will be updated!
 
+## Background
+- Originally I decided to implement this project as I just wanted to practice more with Spring 4 and Thymeleaf.
+- As of November 2017, I will begin updating this and creating a new repository for it.
+  - For cleaner code such as in the pom file I will be using Spring5 and Spring Boot to reduce the amount of dependencies needed.
+
 
 ## Gmail API 
 
@@ -15,6 +20,7 @@ The below sections will be updated!
 
 # todo: (currently what I'm working on replacing)
 
+- Use Spring 5 and Spring Boot.
 - refactor code (still on going).
 - styling of the pages (specificially the errors).
 - also, the registration tests are not complete, I don't explicity test for a user name that already exists which should throw an existing DataIntegrityViolation exception. I will be adding this in too.
